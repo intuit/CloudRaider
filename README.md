@@ -5,7 +5,7 @@
 
 <BR></BR>
 [![Build Status](https://api.travis-ci.org/intuit/CloudRaider.svg?branch=develop)](https://travis-ci.org/intuit/CloudRaider)
-[![Coverage Status](https://coveralls.io/repos/github/intuit/CloudRaider/badge.svg?branch=develop)](https://coveralls.io/github/intuit/Autumn?branch=develop)
+[![Coverage Status](https://coveralls.io/repos/github/intuit/CloudRaider/badge.svg?branch=master)](https://coveralls.io/github/intuit/CloudRaider?branch=master)
 [![Apache 2](http://img.shields.io/badge/license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 ## Introduction to Cloud-Raider 
 
