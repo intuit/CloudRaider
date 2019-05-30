@@ -1,0 +1,2 @@
+TEMP_FILE="remove_me"
+sudo dd if=/dev/zero of=/{0}/$TEMP_FILE bs=1M count={1}000 oflag=direct

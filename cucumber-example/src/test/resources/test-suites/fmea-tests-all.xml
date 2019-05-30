@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Default Suite">
+  <listeners>
+    <listener class-name="com.intuit.cloudraider.cucumber.util.ExtentReporterNG" />
+    <listener class-name="com.intuit.cloudraider.cucumber.util.CucumberReporterNG" />
+  </listeners>
+  <test name="fmea-testing">
+    <classes>
+      <class name="com.intuit.cloudraider.client.cucumber.ApplicationLoadBalancerCukeTest"/>
+    </classes>
+  </test> <!-- infrastructure-testing -->
+</suite> <!-- Default Suite -->

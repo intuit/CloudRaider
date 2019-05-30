@@ -1,0 +1,3 @@
+PID=`ps -ef | grep '''dd if'''  | grep -v grep | awk '''{ print $2 }'''`
+echo $PID
+sudo kill -9 $PID
