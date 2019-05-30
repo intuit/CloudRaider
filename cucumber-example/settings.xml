@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+    <servers>
+        <server>
+            <id>scm.dev.snap.repo</id>
+            <username>${env.NEXUS_SNAPSHOT_REPO_USERNAME}</username>
+            <password>${env.NEXUS_SNAPSHOT_REPO_PASSWORD}</password>
+        </server>
+        <server>
+            <id>scm.int.rel.repo</id>
+            <username>${env.NEXUS_RELEASE_REPO_USERNAME}</username>
+            <password>${env.NEXUS_RELEASE_REPO_PASSWORD}</password>
+        </server>
+    </servers>
+
+    <mirrors>
+        <mirror>
+            <id>intuit-mirror</id>
+            <url>http://nexus-proxy/nexus/content/groups/public/</url>
+            <mirrorOf>central</mirrorOf>
+        </mirror>
+    </mirrors>
+
+    <profiles>
+        <profile>
+            <id>nexus-repo</id>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <url>http://central</url>
+                    <releases />
+                    <snapshots />
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>http://central</url>
+                    <releases />
+                    <snapshots />
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>nexus-repo</activeProfile>
+    </activeProfiles>
+</settings>

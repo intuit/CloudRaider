@@ -1,0 +1,2 @@
+sudo dd if=/dev/urandom of=/dev/null &
+
