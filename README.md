@@ -4,9 +4,10 @@
 </div>
 
 <BR></BR>
-[![Build Status](https://api.travis-ci.org/intuit/CloudRaider.svg?branch=develop)](https://travis-ci.org/intuit/CloudRaider)
-[![Coverage Status](https://coveralls.io/repos/github/intuit/CloudRaider/badge.svg?branch=master)](https://coveralls.io/github/intuit/CloudRaider?branch=master)
+[![Build Status](https://api.travis-ci.com/intuit/CloudRaider.svg?branch=development)](https://travis-ci.com/intuit/CloudRaider)
+[![GitHub release](https://img.shields.io/github/release/intuit/CloudRaider.svg)](https://github.com/intuit/CloudRaider/releases)
 [![Apache 2](http://img.shields.io/badge/license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+
 ## Introduction to Cloud-Raider 
 
 CloudRaider is a new Testing Framework to perform "Failure Mode Effect Analysis" (FMEA) testing in AWS.  Cloud Raider also provide behavior driven testing approach via Cucumber framework. Cloud Raider provides a programmatic way to execute controlled failures, and also recover quickly back to normal. As it provides BDD way to write test cases, your FMEA test plan can itself become your test cases that can be executed as is.
