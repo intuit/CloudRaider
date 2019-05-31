@@ -145,7 +145,7 @@ And most convenient of all, you can even point to a directory (or package). Comb
         features = "src/test/features",
         plugin = {"pretty", "html:target/surefire-reports/cucumber-html-report", "json:target/surefire-reports/cucumber-results.json", "junit:target/surefire-reports/cucumber-results.xml"},
         tags = "@EC2Failure",
-        glue = "com.intuit.fmea.cucumber.steps"
+        glue = "com.intuit.cloudraider.cucumber.steps"
 )
 ```
 
@@ -178,7 +178,7 @@ mvn test -Dcucumber.options="--tags @feature1,@feature2"
 
    IntelliJ 14.1.3 or higher have reported that execution fails with Exception in thread "main" java.lang.NoClassDefFoundError: org/springframework/transaction/TransactionDefinition.
    
-   The cause is incorrect detection of the Glue property, for some reason the package cucumber.api.spring is added incorrectly.  Edit run configuration and remove "cucumber.api.spring" from glue and make sure glue is set to "com.intuit.fmea.cucumber.steps"
+   The cause is incorrect detection of the Glue property, for some reason the package cucumber.api.spring is added incorrectly.  Edit run configuration and remove "cucumber.api.spring" from glue and make sure glue is set to "com.intuit.cloudraider.cucumber.steps"
 
 
 
