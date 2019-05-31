@@ -4,7 +4,7 @@
 </div>
 
 <BR></BR>
-[![Build Status](https://api.travis-ci.org/intuit/CloudRaider.svg?branch=master)](https://travis-ci.org/intuit/CloudRaider)
+[![Build Status](https://travis-ci.com/intuit/CloudRaider.svg?branch=master)](https://travis-ci.com/intuit/CloudRaider)
 [![GitHub release](https://img.shields.io/github/release/intuit/CloudRaider.svg)](https://github.com/intuit/CloudRaider/releases)
 [![Apache 2](http://img.shields.io/badge/license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 ## Introduction to Cloud-Raider 
