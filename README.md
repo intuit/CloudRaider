@@ -4,6 +4,7 @@
 </div>
 
 <BR></BR>
+[![Support](https://badges.gitter.im/intuit/cloudraider.svg)](https://gitter.im/CloudRaider/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.com/intuit/CloudRaider.svg?branch=master)](https://travis-ci.com/intuit/CloudRaider)
 [![GitHub release](https://img.shields.io/github/release/intuit/CloudRaider.svg)](https://github.com/intuit/CloudRaider/releases)
 [![Apache 2](http://img.shields.io/badge/license-Apache%202-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0)
