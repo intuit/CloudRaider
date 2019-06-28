@@ -56,6 +56,8 @@
         <suite>fmea-tests-all.xml</suite>
         <jacoco.version>0.8.3</jacoco.version>
         <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
 
@@ -99,6 +101,9 @@
                 <configuration>
                     <destFile>${sonar.jacoco.reportPath}</destFile>
                     <append>true</append>
+                    <excludes>
+                        <exclude>com/intuit/cloudraider/client/**/*.class</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
