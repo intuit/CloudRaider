@@ -1,6 +1,6 @@
 language: java
 jdk:
-  - oraclejdk8
+- oraclejdk8
 sudo: false
 addons:
   apt:
@@ -8,3 +8,5 @@ addons:
     - oracle-java8-installer
 install: true
 script: mvn clean install
+after_success:
+- mvn clean test jacoco:report coveralls:report
