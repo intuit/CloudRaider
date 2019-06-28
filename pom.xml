@@ -55,7 +55,7 @@
         <spring.version>4.3.22.RELEASE</spring.version>
         <suite>fmea-tests-all.xml</suite>
         <jacoco.version>0.8.3</jacoco.version>
-        <sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
+        <sonar.jacoco.reportPath>${basedir}/target/jacoco.exec</sonar.jacoco.reportPath>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
