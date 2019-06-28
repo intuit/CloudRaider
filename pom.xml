@@ -94,22 +94,71 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M3</version>
             </plugin>
+            <!--<plugin>-->
+                <!--<groupId>org.jacoco</groupId>-->
+                <!--<artifactId>jacoco-maven-plugin</artifactId>-->
+                <!--<version>${jacoco.version}</version>-->
+                <!--<configuration>-->
+                    <!--<destFile>${sonar.jacoco.reportPath}</destFile>-->
+                    <!--<append>true</append>-->
+                    <!--<excludes>-->
+                        <!--<exclude>com/intuit/cloudraider/client/**/*.class</exclude>-->
+                    <!--</excludes>-->
+                <!--</configuration>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<id>agent</id>-->
+                        <!--<goals>-->
+                            <!--<goal>prepare-agent</goal>-->
+                        <!--</goals>-->
+                    <!--</execution>-->
+                    <!--<execution>-->
+                        <!--<id>report</id>-->
+                        <!--<phase>prepare-package</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>report</goal>-->
+                        <!--</goals>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+            <!--</plugin>-->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
+                <version>0.8.3</version>
                 <configuration>
-                    <destFile>${sonar.jacoco.reportPath}</destFile>
-                    <append>true</append>
                     <excludes>
                         <exclude>com/intuit/cloudraider/client/**/*.class</exclude>
+                        <exclude>*</exclude>
                     </excludes>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>agent</id>
+                        <id>jacoco-initialize</id>
                         <goals>
                             <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-instrument</id>
+                        <goals>
+                            <goal>instrument</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacoco.skip.instrument}</skip>
+                        </configuration>
+
+                    </execution>
+                    <execution>
+                        <id>jacoco-restore-instrumented-classes</id>
+                        <goals>
+                            <goal>restore-instrumented-classes</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-site</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>report</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -120,7 +169,7 @@
                 <version>4.1.0</version>
                 <configuration>
                     <jacocoReports>
-                        <jacocoReport>${basedir}/target/jacoco.xml</jacocoReport>
+                        <jacocoReport>${basedir}/cloudraider-core/target/site/jacoco/jacoco.xml</jacocoReport>
                     </jacocoReports>
                 </configuration>
             </plugin>
