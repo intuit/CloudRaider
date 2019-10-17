@@ -31,6 +31,8 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.google.common.base.Strings;
+import com.intuit.cloudraider.utils.ConfigUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +73,8 @@ public class BasicCredentials implements Credentials{
         Properties prop = new Properties();
         InputStream input;
         try {
-            input = ClassLoader.getSystemResourceAsStream("config.properties");
+            String configfile = ConfigUtils.getConfigFilePath();
+            input = ClassLoader.getSystemResourceAsStream(configfile);
             prop.load(input);
             prop.putAll(System.getProperties());
             region = prop.getProperty("aws.region");

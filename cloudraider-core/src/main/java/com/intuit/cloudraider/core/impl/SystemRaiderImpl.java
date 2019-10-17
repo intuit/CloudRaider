@@ -29,6 +29,7 @@ import com.google.common.net.InetAddresses;
 import com.intuit.cloudraider.commons.CloudRaiderSSHSessionFactory;
 import com.intuit.cloudraider.commons.SystemDelegator;
 import com.intuit.cloudraider.core.interfaces.SystemRaider;
+import com.intuit.cloudraider.utils.ConfigUtils;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSchException;
@@ -70,7 +71,7 @@ public class SystemRaiderImpl implements SystemRaider {
      */
     public SystemRaiderImpl() {
            }
-    
+
 
     /**
      * Execute the given script on the specified instance with parameters.
@@ -137,18 +138,14 @@ public class SystemRaiderImpl implements SystemRaider {
      * @return SessionFactory
      */
     private SessionFactory createSessionFactory(String ip) throws JSchException, IOException {
-    	
+
     	Properties prop = new Properties();
         InputStream input;
-        String configfile = System.getProperty("config.file");
-        logger.debug("System property config.file= " + configfile);
 
-        if(Strings.isNullOrEmpty(configfile)){
-            configfile = "config.properties";
-        }
+        String configfile = ConfigUtils.getConfigFilePath();
         input = ClassLoader.getSystemResourceAsStream(configfile);
         prop.load(input);
-        
+
         String skipbastion = prop.getProperty("skipbastion");
 
         InetAddresses.forString(ip);
@@ -158,7 +155,7 @@ public class SystemRaiderImpl implements SystemRaider {
 
 
         sessionFactory.addIdentityFromPrivateKey(systemDelegator.getSshParameters().getPrivateKeyPath(), systemDelegator.getSshParameters().getPassPhrase());
-        
+
         sessionFactory.printIdentities();
         Map<String,String> config = new HashMap<String, String>();
 
@@ -177,7 +174,7 @@ public class SystemRaiderImpl implements SystemRaider {
 
             logger.debug("SSH HostName: " + destinationSessionFactory.getHostname());
             logger.debug("SSH Port: " +String.valueOf(destinationSessionFactory.getPort()));
-        	
+
             return destinationSessionFactory;
         }
         else
@@ -187,7 +184,7 @@ public class SystemRaiderImpl implements SystemRaider {
 	                .setHostname( systemDelegator.getSshParameters().getBastionHost() )
 	                .setPort( SessionFactory.SSH_PORT )
 	                .build();
-	
+
 	        SessionFactory destinationSessionFactory = sessionFactory
 	                .newSessionFactoryBuilder()
 	                .setProxy( new SshProxy( proxySessionFactory ) )
@@ -195,8 +192,8 @@ public class SystemRaiderImpl implements SystemRaider {
 
             logger.debug("SSH HostName: " + destinationSessionFactory.getHostname());
             logger.debug("SSH Port: " +String.valueOf(destinationSessionFactory.getPort()));
-        	
-	
+
+
 	        return destinationSessionFactory;
         }
     }
