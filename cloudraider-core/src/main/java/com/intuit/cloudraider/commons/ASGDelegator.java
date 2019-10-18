@@ -28,54 +28,29 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClientBuilder;
-import com.intuit.cloudraider.model.Credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
 
 /**
  * Creating access to Amazon AutoScaling functionality through AmazonAutoScaling
  * <p>
   */
 @Component
-public class ASGDelegator {
+public class ASGDelegator extends DelegatorBase<AmazonAutoScaling> {
 
     /**
      * The Logger.
      */
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private AmazonAutoScaling asgClient;
-    private AWSCredentials awsCredentials;
-    private String region;
-
-    @Autowired
-    private Credentials credentials;
-
 
     /**
      * Instantiates a new Asg delegator.
      */
-    public ASGDelegator() {
+    public ASGDelegator(){
 
     }
-
-    @PostConstruct
-    private void init()
-    {
-        awsCredentials = credentials.getAwsCredentials();
-        region = credentials.getRegion();
-        asgClient = AmazonAutoScalingClientBuilder
-                .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
-                .withRegion(region)
-                .build();
-
-    }
-
 
     /**
      * Gets asg client.
@@ -83,6 +58,15 @@ public class ASGDelegator {
      * @return the asg client
      */
     public AmazonAutoScaling getAsgClient() {
-        return asgClient;
+        return getClient();
     }
+
+	@Override
+	protected AmazonAutoScaling buildClient(AWSCredentials creds, String region) {
+		return AmazonAutoScalingClientBuilder
+                .standard()
+                .withCredentials(new AWSStaticCredentialsProvider(creds))
+                .withRegion(region)
+                .build();
+	}
 }

@@ -66,6 +66,7 @@ public class ApplicationLoadBalancerDelegator {
     private void init()
     {
         awsCredentials = credentials.getAwsCredentials();
+        
         region = credentials.getRegion();
 
         amazonApplicationLoadBalancing = AmazonElasticLoadBalancingClientBuilder
@@ -73,6 +74,7 @@ public class ApplicationLoadBalancerDelegator {
                 .withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
                 .withRegion(region)
                 .build();
+        
     }
 
     /**
