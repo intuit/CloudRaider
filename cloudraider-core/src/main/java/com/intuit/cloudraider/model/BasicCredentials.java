@@ -30,6 +30,8 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,9 @@ public class BasicCredentials implements Credentials{
     private String AWSSecretKey;
     private String AWSSessionToken;
 
-    /**
+	private String targetAccount;
+
+	/**
      * Reads from config.properties to search for potential AWS account credentials.
      * The aws.region must be specified to proceed.
      * A "aws.keyless" option exists and requires "aws.assumerRole", "aws.deployerRole", "aws.uuid" to be specified within
@@ -79,7 +83,10 @@ public class BasicCredentials implements Credentials{
             if(Strings.isNullOrEmpty(region)){
                 throw new RuntimeException("No Region defined in the configuration file");
             }
-
+            
+            // Get the target account from env or properties if env var is not set
+            targetAccount = System.getenv("aws.targetAccount") != null ? System.getenv("aws.targetAccount") : prop.getProperty("aws.targetAccount");
+            
             String profile = prop.getProperty("aws.profile");
             boolean keyless = Boolean.valueOf(prop.getProperty("aws.keyless"));
 
@@ -157,7 +164,9 @@ public class BasicCredentials implements Credentials{
      */
     public AWSCredentials getAwsCredentials() {
         if (awsCredentials == null) {
-            awsCredentials = new DefaultAWSCredentialsProviderChain().getCredentials();
+        	AWSCredentialsProvider provider = new DefaultAWSCredentialsProviderChain();
+        	validateAccount(provider);
+            awsCredentials = provider.getCredentials();
         }
         return awsCredentials;
     }
@@ -174,4 +183,20 @@ public class BasicCredentials implements Credentials{
         return region;
     }
 
+    private void validateAccount(AWSCredentialsProvider provider) {
+    	
+    	if (targetAccount != null) {
+	    	AWSSecurityTokenService sts = getSecurityTokenService(provider);
+	    	GetCallerIdentityRequest getCallerIdentityRequest = new GetCallerIdentityRequest();
+			GetCallerIdentityResult result = sts.getCallerIdentity(getCallerIdentityRequest);
+			if (!result.getAccount().equals(targetAccount.replace("-", "").trim())) {
+				throw new RuntimeException(String.format("account: %s does not match target account: %s", result.getAccount(), targetAccount));
+			}
+    	}
+    }
+
+    protected AWSSecurityTokenService getSecurityTokenService(AWSCredentialsProvider provider) {
+    	return AWSSecurityTokenServiceClientBuilder.standard().withCredentials(provider).build();
+    }
+    
 }
