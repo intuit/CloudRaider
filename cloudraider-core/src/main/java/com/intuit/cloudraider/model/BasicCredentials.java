@@ -30,9 +30,9 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 import com.google.common.base.Strings;
+import com.intuit.cloudraider.utils.AWSAccountValidator;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +60,16 @@ public class BasicCredentials implements Credentials{
     private String AWSSessionToken;
 
 	private String targetAccount;
+	
+	public String getTargetAccount() {
+		return targetAccount;
+	}
+
+	public void setTargetAccount(String targetAccount) {
+		this.targetAccount = targetAccount;
+	}
+
+	private AWSAccountValidator validator;
 
 	/**
      * Reads from config.properties to search for potential AWS account credentials.
@@ -157,6 +167,10 @@ public class BasicCredentials implements Credentials{
             //ignore to use amazon default provider
         }
     }
+    
+    public BasicCredentials(AWSAccountValidator validator) {
+    	this.validator = validator;
+    }
 
     /**
      * Returns AWSCredentials for the given user/account. Reverts to default credentials provider if no credentials exist.
@@ -165,7 +179,11 @@ public class BasicCredentials implements Credentials{
     public AWSCredentials getAwsCredentials() {
         if (awsCredentials == null) {
         	AWSCredentialsProvider provider = new DefaultAWSCredentialsProviderChain();
-        	validateAccount(provider);
+        	if (validator == null) {
+        		validator = new AWSAccountValidator(provider);
+        	}
+        	
+        	validator.validateAccount(targetAccount);
             awsCredentials = provider.getCredentials();
         }
         return awsCredentials;
@@ -183,20 +201,5 @@ public class BasicCredentials implements Credentials{
         return region;
     }
 
-    private void validateAccount(AWSCredentialsProvider provider) {
-    	
-    	if (targetAccount != null) {
-	    	AWSSecurityTokenService sts = getSecurityTokenService(provider);
-	    	GetCallerIdentityRequest getCallerIdentityRequest = new GetCallerIdentityRequest();
-			GetCallerIdentityResult result = sts.getCallerIdentity(getCallerIdentityRequest);
-			if (!result.getAccount().equals(targetAccount.replace("-", "").trim())) {
-				throw new RuntimeException(String.format("account: %s does not match target account: %s", result.getAccount(), targetAccount));
-			}
-    	}
-    }
-
-    protected AWSSecurityTokenService getSecurityTokenService(AWSCredentialsProvider provider) {
-    	return AWSSecurityTokenServiceClientBuilder.standard().withCredentials(provider).build();
-    }
     
 }

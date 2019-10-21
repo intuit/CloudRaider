@@ -31,6 +31,15 @@ if you are using passphrase
 ```
 aws.ec2.privateKeyPassPhrase=
 ```
+
+if you want to validate that the credentials you configured are for the expected AWS Account you can set the property
+
+```
+aws.targetAccount=<AWS Account Number>
+```
+
+either in the config.properties file, a System Property or an Environment Variable
+
 ## How to add new Test case?
 
 Let's look an example EC2FMEATest class that invokes termination of EC2 Instance.
