@@ -16,6 +16,8 @@ public class BasicCredentialsTest {
 	
 	@Test
 	public void testValidateAccountNull() {
+		System.setProperty("aws.accessKeyId", "accessKey");
+		System.setProperty("aws.secretKey", "secret");
 		AWSAccountValidator mockValidator = Mockito.mock(AWSAccountValidator.class);
 		BasicCredentials creds = new BasicCredentials(mockValidator);
 		
@@ -27,6 +29,8 @@ public class BasicCredentialsTest {
 	
 	@Test
 	public void testValidateAccount() {
+		System.setProperty("aws.accessKeyId", "accessKey");
+		System.setProperty("aws.secretKey", "secret");
 		AWSAccountValidator mockValidator = Mockito.mock(AWSAccountValidator.class);
 		BasicCredentials creds = new BasicCredentials(mockValidator);
 		creds.setTargetAccount("1234");
