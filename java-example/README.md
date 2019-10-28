@@ -31,6 +31,13 @@ if you are using passphrase
 ```
 aws.ec2.privateKeyPassPhrase=
 ```
+
+## Custom configration file
+You can pass a custom configuration file by running the maven job with a `configFilePath` parameter:
+```
+mvn test -DconfigFilePath="customconfig.properties"
+```
+
 ## How to add new Test case?
 
 Let's look an example EC2FMEATest class that invokes termination of EC2 Instance.

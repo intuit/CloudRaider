@@ -10,4 +10,4 @@ target
 *.log.*
 */*.log
 */*.log.*
-
+*/.factorypath
