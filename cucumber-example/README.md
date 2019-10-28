@@ -45,7 +45,7 @@ The validator uses the standard as credentials resolving chain. This means that 
 #### Eclipse
     https://shankargarg.wordpress.com/2016/05/15/integrating-eclipse-with-cucumber-natural-plugin/
 
-#### Cucumber Version 
+#### Cucumber Version
 2.3.1 is supported version for this client impletementation
 
 #### Client Confirguration with AWS credentials
@@ -69,10 +69,17 @@ if there is a passphrase for ssh key than set the property below
 ```
 aws.ec2.privateKeyPassPhrase=
 ```
+
+#### Passing a custom configuration file
+You can pass a custom configuration file by running the maven job with a `configFilePath` parameter:
+```
+mvn test -Dcucumber.options="--tags @feature1 --tags @feature2 -DconfigFilePath="customconfig.properties"
+```
+
 ## Test Execution
 
 ### Running Feature file
-Tests can be executed within IDE by execution of `*.feature` file via cucumber pluggin.  
+Tests can be executed within IDE by execution of `*.feature` file via cucumber pluggin.
 
 ### Running With TestNG
 To run a script `*.feature` file from your Java IDE, you just need the following empty test-class in the same package. The name of the class doesn't matter, and it will automatically run any `*.feature` file in the same package. This comes in useful because depending on how you organize your files and folders - you can have multiple feature files executed by a single JUnit test-class.
@@ -105,7 +112,7 @@ public class EC2FailureCucumberTest extends AbstractTestNGCucumberTests {
 Refer to your IDE documentation for how to run a JUnit class.  Typically right-clicking on the file in the project browser or even within the editor view would bring up the "Run as JUnit Test" menu option.
 
 ### HTML report
-An HTML report is output to the `target/surefire-reports` folder 
+An HTML report is output to the `target/surefire-reports` folder
 
 
 
@@ -153,7 +160,7 @@ And most convenient of all, you can even point to a directory (or package). Comb
 ## Command Line
 Normally in dev mode, you will use your IDE to run a `*.feature` file directly or via the companion 'runner' JUnit Java class. When you have a 'runner' class in place, it would be possible to run it from the command-line as well.
 
-Note that the `mvn test` command only runs test classes that follow the `*Test.java` 
+Note that the `mvn test` command only runs test classes that follow the `*Test.java`
 
 To run scenarios with @feature1 and @feature2 tags:
 ```
@@ -165,7 +172,7 @@ mvn test -Dcucumber.options="--tags @feature1,@feature2"
 ```
 
 ### Troubleshooting Cucumber IDE Support
-* On Eclipse you may see warnings such as `Step 'xxx' does not have a matching glue code` or `required(..)+ loop did not match anything at input Scenario:`, and on IntelliJ: `Unimplemented substep definition`. 
+* On Eclipse you may see warnings such as `Step 'xxx' does not have a matching glue code` or `required(..)+ loop did not match anything at input Scenario:`, and on IntelliJ: `Unimplemented substep definition`.
   ### Eclipse Solution
    Eclipse --> Preferences --> Cucumber --> User Settings
 
@@ -177,7 +184,7 @@ mvn test -Dcucumber.options="--tags @feature1,@feature2"
    If you are trying to execute Feature file than edit configuration and set glue to "com.intuit.fmea.cucumber.steps"
 
    IntelliJ 14.1.3 or higher have reported that execution fails with Exception in thread "main" java.lang.NoClassDefFoundError: org/springframework/transaction/TransactionDefinition.
-   
+
    The cause is incorrect detection of the Glue property, for some reason the package cucumber.api.spring is added incorrectly.  Edit run configuration and remove "cucumber.api.spring" from glue and make sure glue is set to "com.intuit.cloudraider.cucumber.steps"
 
 
@@ -207,18 +214,18 @@ Feature: EC2 Failure
       | ec2Name         | elbName     | alarmName                       |instanceCount |  processName   | |wait1 | wait2 | state1 | state2| expected-count1|expected-count2|
       | "hello-a-fe-e2e" | "hello-a-fe-e2e"| "hello-a-fe-e2e-UnHealthyHosts" | 1| "nginx"       | |4|4| "ALARM" | "OK"| 5  |6 |
 ```
-      
-Explanation of each of the keywords can be found at https://docs.cucumber.io/gherkin/reference/ 
+
+Explanation of each of the keywords can be found at https://docs.cucumber.io/gherkin/reference/
 
 # Step Definitions
 For each of the scenario to be processed a corresponding step definition is required. Each step definition is a java method that maps to the cucumber steps. The step definitions for the scenarios are in the Cloud-Raider library.
 
 
-## Index 
+## Index
 
-:white_small_square: | :white_small_square: | :white_small_square:  
------ | ---- | ---- 
-**AWS Resource Type** | **STEP DEFINITION** | **PURPOSE** 
+:white_small_square: | :white_small_square: | :white_small_square:
+----- | ---- | ----
+**AWS Resource Type** | **STEP DEFINITION** | **PURPOSE**
 Application Load Balancer |  ```Given ALB <string> ```| This will set the name of Application Load Balancer and fetch healthy EC2 Intances
 Classic Load Balancer |  ```Given ELB <string> ```| This will set the name of Classic Load Balancer (ELB) and fetch healthy EC2 Intances
 Network Load Balancer |  ```Given NLB <string> ```| This will set the name of Network Load Balancer and fetch healthy EC2 Intances

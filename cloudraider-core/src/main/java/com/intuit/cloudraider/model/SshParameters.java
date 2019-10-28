@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import com.google.common.base.Strings;
+import com.intuit.cloudraider.utils.ConfigUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,12 +73,7 @@ public class SshParameters {
 
         try {
 
-            String configfile = System.getProperty("config.file");
-            logger.debug("System property - config file=" + configfile);
-
-            if(Strings.isNullOrEmpty(configfile)){
-              configfile = "config.properties";
-            }
+            String configfile = ConfigUtils.getConfigFilePath();
             input = getClass().getClassLoader().getResourceAsStream(configfile);
 
             prop.load(input);
