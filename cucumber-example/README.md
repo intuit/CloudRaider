@@ -220,13 +220,94 @@ Explanation of each of the keywords can be found at https://docs.cucumber.io/ghe
 # Step Definitions
 For each of the scenario to be processed a corresponding step definition is required. Each step definition is a java method that maps to the cucumber steps. The step definitions for the scenarios are in the Cloud-Raider library.
 
+## Index 
 
-## Index
+### CLOUD WATCH
 
-:white_small_square: | :white_small_square: | :white_small_square:
------ | ---- | ----
-**AWS Resource Type** | **STEP DEFINITION** | **PURPOSE**
-Application Load Balancer |  ```Given ALB <string> ```| This will set the name of Application Load Balancer and fetch healthy EC2 Intances
-Classic Load Balancer |  ```Given ELB <string> ```| This will set the name of Classic Load Balancer (ELB) and fetch healthy EC2 Intances
-Network Load Balancer |  ```Given NLB <string> ```| This will set the name of Network Load Balancer and fetch healthy EC2 Intances
-EC2|```Given EC2 <string> ```| This step definition will pick up ec2 instance for given name tag
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Given CloudWatch Alarm <string>``` | This will set the cloudwatch alarm name
+```Then assertCW alarm = <string>``` | This will assert the cloudwatch alarm expected state
+
+### DELAY
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Then wait for <integer> minute``` | This will wait for time (in minutes)
+```Then wait for <integer> seconds``` | This will wait for time (in seconds)
+
+### ELASTIC CACHE
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Given ElastiCache <string>``` | This will set the name of elastic cache
+```When reboot ElastiCache nodes <integer>``` | This will reboot elastc cache nodes
+```Then assertElastiCache cluster status <string>``` | This will assert status of elastic cache clusters
+```When add ElastiCache nodes <integer>``` | This will add elastic cache nodes
+```When remove ElastiCache nodes <integer>``` | This will remove elastic cache nodes
+```When detach ElastiCache subnet <string>``` | This will detach elastic cache from the subnet
+```Then attach ElastiCache subnet <string>``` | This will attach elastic cache with the subnet
+```When change ElastiCache security group from <string> to <string>``` | This will change security group of elastic cache
+
+### END SCENARIOS
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Then end scenario``` | This will end the scenario and clears the cache
+
+### ENVIRONMENT HEALER 
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Then recover``` | This will recover the failure scenario executed
+
+### INSTANCE FAILURE 
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Given EC2 <string>``` | This will set the ec2 instance name
+```When terminate process  <string> on <integer> instance``` | This will terminate process on instances
+```When CPU spike on <integer> instances for <integer> cores``` | This will generate CPU spike on instances
+```When terminate process <string>``` | This will terminate process on all instances
+```When terminate <integer> instance``` | This will terminate instances
+```When <string> disk full with <integer> GB on <integer> instance``` | This will make disk full 
+```When block domain <string> on <integer> instances``` | This will block domain on instances
+```When inject network latency <integer> ms to <integer> ms on <ineteger> instances``` | This will add network latency to all packets
+
+
+### LOAD BALANCER
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Given ALB <string>``` | This will set ALB name
+```When detach subnet <string>``` | This will detach subnet from load balancer
+```Then attach subnet <string>``` | This will attach subnet with load balancer
+```Then assertEC2 healthy host count = <integer>``` | This will assert instances healthy host count
+```Then assertEC2 unhealthy host count = <integer>``` | This will assert instances unhealthy host count
+```When detach <integer> instances from loadbalancer``` | This will detach instances from load balancer
+
+
+### RDS FAILURE
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```Given dBInstance <string>``` | This will set db instances
+```When reboot <integer> DbInstance``` | This will reboot db instances 
+```Then assertRDS instance status <string>``` | This will assert status of RDS instance
+```When reboot DbInstance``` | This will reboot db instances
+```When detach DBSecurityGroup <string> with <string>``` | This will detach security group
+```Then attach DBSecurityGroup <string> with <string>``` | This will attach security group
+
+### SSM
+
+**STEP DEFINITION** | **FUNCTIONALITY** 
+-------- | -----
+```When SSM terminate process  <string> on <integer> instance``` | This will terminate process on instance
+```When assertCommand execution status = <string>``` | This will assert status of command
+```When SSM terminate process <string>``` | This will terminate process on instance
+```When SSM <string> disk full with <integer> GB on <integer> instance``` | This will be used to make disk full on instance
+```When SSM RAM disk full with <integer> GB on <integer> instance``` | This will be used to make RAM full on instance
+```When SSM block domain <string> on <integer> instances``` | This will block domain on the instance
+```When SSM corrupt network <integer> percent on <integer> instances``` | This will corrupt network packets
+```When SSM inject network latency <integer> ms to <integer> ms on <integer> instances``` | This will introduce network latency
+```When SSM block network port <integer> on <integer> instances``` | This will block port in network
