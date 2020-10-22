@@ -218,7 +218,9 @@ Feature: EC2 Failure
 Explanation of each of the keywords can be found at https://docs.cucumber.io/gherkin/reference/
 
 # Step Definitions
-For each of the scenario to be processed a corresponding step definition is required. Each step definition is a java method that maps to the cucumber steps. The step definitions for the scenarios are in the Cloud-Raider library.
+For each of the scenario to be processed a corresponding step definition is required. Each step definition is a java method that maps to the cucumber steps. The step definitions for the scenarios are in the Cloud-Raider library. The diagram below shows the mapping between cloud raider library and cucumber client.
+
+<a href=""><img src="src/main/resources/cucumber-client-library-integration.png" /></a>
 
 ## Index 
 
