@@ -19,7 +19,7 @@ CloudRaider is a new Testing Framework to perform "Failure Mode Effect Analysis"
 
 ### Chaos Engineering ###
 The Cucumber Client also provides functionality for running automated FMEA tests through the principles of Chaos Engineering. 
-To learn more, Please review [here](ChaosFeature.md)
+To learn more, Please review [here](https://principlesofchaos.org/)
 
 ### Getting Started ##
 
