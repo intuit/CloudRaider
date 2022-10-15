@@ -1,6 +1,6 @@
 <div align="center">
   <img width="300" height="100"
-    src="./cloudraider-logo.png">
+    src="./docs/images/cloudraider-logo.png">
 </div>
 
 <BR></BR>
@@ -14,7 +14,7 @@ CloudRaider is a new Testing Framework to perform "Failure Mode Effect Analysis"
 
 <div align="center">
   <img width="800" height="500"
-    src="./overview.png">
+    src="./docs/images/overview.png">
 </div>
 
 ### Chaos Engineering ###
