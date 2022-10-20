@@ -1,0 +1,752 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApplicationLoadBalancerRaiderImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.core.impl</a> &gt; <span class="el_source">ApplicationLoadBalancerRaiderImpl.java</span></div><h1>ApplicationLoadBalancerRaiderImpl.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.core.impl;
+
+import com.amazonaws.services.elasticloadbalancing.model.Instance;
+import com.amazonaws.services.elasticloadbalancingv2.model.*;
+import com.amazonaws.util.StringUtils;
+import com.intuit.cloudraider.commons.ApplicationLoadBalancerDelegator;
+import com.intuit.cloudraider.core.interfaces.LoadBalancerRaider;
+import com.intuit.cloudraider.exceptions.ResourceNotFoundException;
+import com.intuit.cloudraider.exceptions.UnSupportedFeatureException;
+import com.intuit.cloudraider.model.HealthCheckTarget;
+import com.intuit.cloudraider.utils.HealthCheckUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * AWS Application Load Balancer functionality.
+ * &lt;p&gt;
+  */
+@Component(value=&quot;albRaiderBean&quot;)
+public class ApplicationLoadBalancerRaiderImpl implements LoadBalancerRaider {
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L54">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private ApplicationLoadBalancerDelegator applicationLoadBalancerDelegator;
+
+    /**
+     * Instantiates a new Application load balancer raider.
+     */
+<span class="nc" id="L62">    public ApplicationLoadBalancerRaiderImpl() {</span>
+<span class="nc" id="L63">    }</span>
+
+
+    /**
+     * Deletes the load balancer with the given name.
+     *
+     * @param loadBalancerName load balancer name
+     * @throws ResourceNotFoundException if the load balancer does not exist.
+     */
+    @Override
+    public void deleteLoadBalancer(String loadBalancerName) throws ResourceNotFoundException {
+<span class="nc" id="L74">        DeleteLoadBalancerRequest deleteLoadBalancerRequest = new DeleteLoadBalancerRequest().withLoadBalancerArn(getLoadBalancerArn(loadBalancerName));</span>
+<span class="nc" id="L75">        applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().deleteLoadBalancer(deleteLoadBalancerRequest);</span>
+<span class="nc" id="L76">    }</span>
+
+    /**
+     * Gets the ARN for the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @return load balancer arn
+     */
+    private String getLoadBalancerArn(String loadBalancerName) {
+<span class="nc" id="L85">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(new DescribeLoadBalancersRequest().withNames(loadBalancerName))</span>
+<span class="nc" id="L86">                .getLoadBalancers()</span>
+<span class="nc" id="L87">                .parallelStream()</span>
+<span class="nc" id="L88">                .map(LoadBalancer::getLoadBalancerArn)</span>
+<span class="nc" id="L89">                .findFirst()</span>
+<span class="nc" id="L90">                .get();</span>
+    }
+
+    /**
+     * Feature is not implemented.
+     *
+     * Removes the specified load balancers from the given load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param loadBalancerPorts client port numbers of the listeners
+     */
+    @Override
+    public void deleteLoadBalancerListeners(String loadBalancerName, Integer... loadBalancerPorts) {
+//        try{
+//            DeleteLoadBalancerListenersRequest deleteLoadBalancerListenersRequest = new DeleteLoadBalancerListenersRequest(loadBalancerName, Arrays.asList(loadBalancerPorts));
+//            return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().deleteLoadBalancerListeners(deleteLoadBalancerListenersRequest).toString();
+//        } catch (Exception e){
+//            throw new RuntimeException(e.getMessage());
+//        }
+<span class="nc" id="L109">    }</span>
+
+    /**
+     * Update the port number for one of the given load balancer's listeners.
+     *
+     * @param loadBalancerName load balancer name
+     * @param oldPort old client port for listener
+     * @param newPort new client port for listener
+     */
+    @Override
+    public void updateLoadbalancerListner(String loadBalancerName, int oldPort, int newPort) {
+<span class="nc" id="L120">        throw new UnSupportedFeatureException(&quot;This Feature is not support currently&quot;);</span>
+    }
+
+    /**
+     * De-registers the number of instances from the given load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param numberOfInstances number of instances
+     * @throws ResourceNotFoundException if no instances are registered to the load balancer
+     */
+    @Override
+    public void deregisterInstancesFromLoadBalancer(String loadBalancerName, int numberOfInstances) {
+<span class="nc" id="L132">        List&lt;String&gt; targetGroupArns = this.getTargetGroupArns(loadBalancerName);</span>
+
+<span class="nc" id="L134">        List&lt;TargetDescription&gt; targets = new ArrayList();</span>
+<span class="nc" id="L135">        List&lt;Instance&gt; instances = getAllInstances(loadBalancerName);</span>
+<span class="nc bnc" id="L136" title="All 4 branches missed.">        if (numberOfInstances &lt;= 0 || instances.isEmpty()) {</span>
+<span class="nc" id="L137">            String error = &quot;Number of instances can't be 0 or less &quot; + loadBalancerName;</span>
+        }
+
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (numberOfInstances &gt; instances.size()) {</span>
+<span class="nc" id="L141">            numberOfInstances = instances.size();</span>
+        }
+
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        for (int i = 0; i &lt; numberOfInstances; i++) {</span>
+<span class="nc" id="L145">            TargetDescription target = new TargetDescription().withId(instances.get(i).getInstanceId());</span>
+<span class="nc" id="L146">            targets.add(target);</span>
+        }
+
+<span class="nc" id="L149">        DeregisterTargetsRequest deregisterTargetsRequest = new DeregisterTargetsRequest().withTargetGroupArn(targetGroupArns.get(0))</span>
+<span class="nc" id="L150">                .withTargets(targets);</span>
+<span class="nc" id="L151">        applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().deregisterTargets(deregisterTargetsRequest);</span>
+
+<span class="nc" id="L153">    }</span>
+
+    /**
+     * De-register the given instances from the provided load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param instances list of instance ids
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void deregisterInstancesFromLoadBalancer(String loadBalancerName, List&lt;String&gt; instances) {
+<span class="nc" id="L164">        List&lt;String&gt; targetGroupArns = this.getTargetGroupArns(loadBalancerName);</span>
+<span class="nc" id="L165">        List&lt;TargetDescription&gt; targets = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        for (String instanceId : instances) {</span>
+<span class="nc" id="L168">            TargetDescription target = new TargetDescription().withId(instanceId);</span>
+<span class="nc" id="L169">            targets.add(target);</span>
+<span class="nc" id="L170">        }</span>
+
+<span class="nc" id="L172">        DeregisterTargetsRequest deregisterTargetsRequest = new DeregisterTargetsRequest().withTargetGroupArn(targetGroupArns.get(0))</span>
+<span class="nc" id="L173">                .withTargets(targets);</span>
+<span class="nc" id="L174">        applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().deregisterTargets(deregisterTargetsRequest);</span>
+
+<span class="nc" id="L176">    }</span>
+    /**
+     * Register the given instances to the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param instances list of instance ids
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void registerInstancesFromLoadBalancer(String loadBalancerName, List&lt;String&gt; instances) {
+<span class="nc" id="L186">        List&lt;String&gt; targetGroupArns = this.getTargetGroupArns(loadBalancerName);</span>
+<span class="nc" id="L187">        List&lt;TargetDescription&gt; targets = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L189" title="All 2 branches missed.">        for (String instanceId : instances) {</span>
+<span class="nc" id="L190">            TargetDescription target = new TargetDescription().withId(instanceId);</span>
+<span class="nc" id="L191">            targets.add(target);</span>
+<span class="nc" id="L192">        }</span>
+
+<span class="nc" id="L194">        RegisterTargetsRequest registerTargetsRequest = new RegisterTargetsRequest().withTargetGroupArn(targetGroupArns.get(0)).</span>
+<span class="nc" id="L195">                withTargets(targets);</span>
+<span class="nc" id="L196">        applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().registerTargets(registerTargetsRequest);</span>
+<span class="nc" id="L197">    }</span>
+
+    /**
+     * De-registers all instances from the given load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @throws ResourceNotFoundException if no instances are registered to the load balancer
+     */
+    @Override
+    public void deregisterInstancesFromLoadBalancer(String loadBalancerName) {
+<span class="nc" id="L207">        List&lt;String&gt; targetGroupArns = this.getTargetGroupArns(loadBalancerName);</span>
+<span class="nc" id="L208">        List&lt;TargetDescription&gt; targets = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L209">        List&lt;Instance&gt; instances = getAllInstances(loadBalancerName);</span>
+
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        for (Instance instance : instances) {</span>
+<span class="nc" id="L212">            TargetDescription target = new TargetDescription().withId(instance.getInstanceId());</span>
+<span class="nc" id="L213">            targets.add(target);</span>
+<span class="nc" id="L214">        }</span>
+
+<span class="nc" id="L216">        DeregisterTargetsRequest deregisterTargetsRequest = new DeregisterTargetsRequest().withTargetGroupArn(targetGroupArns.get(0))</span>
+<span class="nc" id="L217">                .withTargets(targets);</span>
+<span class="nc" id="L218">        applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().deregisterTargets(deregisterTargetsRequest);</span>
+<span class="nc" id="L219">    }</span>
+
+    /**
+     * Feature is currently disabled.
+     *
+     * Deletes the given policy from the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param policyName policy name
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void deleteLoadBalancerPolicy(String loadBalancerName, String policyName) {
+//        try {
+//            applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().
+//            DeleteLoadBalancerPolicyRequest deleteLoadBalancerPolicyRequest = new DeleteLoadBalancerPolicyRequest(loadBalancerName, policyName);
+//            return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().deleteLoadBalancerPolicy(deleteLoadBalancerPolicyRequest).toString();
+//        } catch (Exception e){
+//            throw new RuntimeException(e.getMessage());
+//        }
+<span class="nc" id="L239">        throw new UnSupportedFeatureException(&quot;Feature is not Implemented&quot;);</span>
+    }
+
+    /**
+     * Attaches the given subnets to the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param subnets subnet ids to add
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void attachLoadBalancerToSubnets(String loadBalancerName, String... subnets) {
+        try {
+<span class="nc" id="L252">            Set&lt;String&gt; subnetCollection = this.getSubnets(loadBalancerName);</span>
+<span class="nc" id="L253">            subnetCollection.addAll(Arrays.asList(subnets));</span>
+
+            // applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().
+<span class="nc" id="L256">            SetSubnetsResult result = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSubnets(new SetSubnetsRequest()</span>
+<span class="nc" id="L257">                    .withLoadBalancerArn(this.getLoadBalancerArn(loadBalancerName))</span>
+<span class="nc" id="L258">                    .withSubnets(subnetCollection)</span>
+            );
+            // AttachLoadBalancerToSubnetsRequest attachLoadBalancerToSubnetsRequest = new AttachLoadBalancerToSubnetsRequest().withLoadBalancerName(loadBalancerName).withSubnets(subnets);
+<span class="nc" id="L261">        } catch (Exception e) {</span>
+<span class="nc" id="L262">            throw new ResourceNotFoundException(e.getMessage());</span>
+<span class="nc" id="L263">        }</span>
+<span class="nc" id="L264">    }</span>
+
+    /**
+     * Gets the subnets attached to the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @return set of subnet ids
+     */
+    private Set&lt;String&gt; getSubnets(String loadBalancerName) {
+<span class="nc" id="L273">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(new DescribeLoadBalancersRequest().withNames(loadBalancerName))</span>
+<span class="nc" id="L274">                .getLoadBalancers()</span>
+<span class="nc" id="L275">                .parallelStream()</span>
+<span class="nc" id="L276">                .map(LoadBalancer::getAvailabilityZones)</span>
+<span class="nc" id="L277">                .flatMap(l -&gt; l.stream())</span>
+<span class="nc" id="L278">                .collect(Collectors.toList())</span>
+<span class="nc" id="L279">                .stream()</span>
+<span class="nc" id="L280">                .map(AvailabilityZone::getSubnetId)</span>
+<span class="nc" id="L281">                .collect(Collectors.toSet());</span>
+    }
+
+    /**
+     * Gets the subnets attached to the specified load balancer in the given availability zones.
+     *
+     * @param loadBalancerName load balancer name
+     * @param availabilityZone list of availability zones
+     * @return set of subnet ids
+     */
+    private Set&lt;String&gt; getSubnetsInAZ(String loadBalancerName, List&lt;String&gt; availabilityZone) {
+<span class="nc" id="L292">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(new DescribeLoadBalancersRequest().withNames(loadBalancerName))</span>
+<span class="nc" id="L293">                .getLoadBalancers()</span>
+<span class="nc" id="L294">                .parallelStream()</span>
+<span class="nc" id="L295">                .map(LoadBalancer::getAvailabilityZones)</span>
+<span class="nc" id="L296">                .flatMap(l -&gt; l.stream())</span>
+<span class="nc" id="L297">                .collect(Collectors.toList())</span>
+<span class="nc" id="L298">                .stream()</span>
+<span class="nc" id="L299">                .filter(a -&gt; availabilityZone.contains(a.getZoneName()))</span>
+<span class="nc" id="L300">                .map(AvailabilityZone::getSubnetId)</span>
+<span class="nc" id="L301">                .collect(Collectors.toSet());</span>
+    }
+
+    /**
+     * Detaches the given subnets to the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param subnets subnet ids to add
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void detachLoadBalancerFromSubnets(String loadBalancerName, String... subnets) {
+        try {
+<span class="nc" id="L314">            Set&lt;String&gt; subnetCollection = this.getSubnets(loadBalancerName);</span>
+<span class="nc" id="L315">            subnetCollection.removeAll(Arrays.asList(subnets));</span>
+
+<span class="nc" id="L317">            SetSubnetsResult result = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSubnets(new SetSubnetsRequest()</span>
+<span class="nc" id="L318">                    .withLoadBalancerArn(this.getLoadBalancerArn(loadBalancerName))</span>
+<span class="nc" id="L319">                    .withSubnets(subnetCollection)</span>
+            );
+<span class="nc" id="L321">        } catch (Exception e) {</span>
+<span class="nc" id="L322">            throw new ResourceNotFoundException(e.getMessage());</span>
+<span class="nc" id="L323">        }</span>
+<span class="nc" id="L324">    }</span>
+
+    /**
+     * Disables the given availability zones on the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param availabilityZones availability zone ids
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void disableAvailabilityZonesForLoadBalancer(String loadBalancerName, String... availabilityZones) {
+        try {
+<span class="nc" id="L336">            Set&lt;String&gt; subnets = this.getSubnets(loadBalancerName);</span>
+<span class="nc" id="L337">            Set&lt;String&gt; availabilityZonesSubnets = this.getSubnetsInAZ(loadBalancerName, Arrays.asList(availabilityZones));</span>
+
+<span class="nc" id="L339">            subnets.removeAll(availabilityZonesSubnets);</span>
+
+<span class="nc" id="L341">            SetSubnetsResult result = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSubnets(new SetSubnetsRequest()</span>
+<span class="nc" id="L342">                    .withLoadBalancerArn(this.getLoadBalancerArn(loadBalancerName))</span>
+<span class="nc" id="L343">                    .withSubnets(subnets));</span>
+<span class="nc" id="L344">        } catch (Exception e) {</span>
+<span class="nc" id="L345">            throw new RuntimeException(e.getMessage());</span>
+<span class="nc" id="L346">        }</span>
+<span class="nc" id="L347">    }</span>
+
+    /**
+     * Feature is currently disabled.
+     *
+     * Enables the given availability zones on the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param availabilityZones availability zone ids
+     * @throws ResourceNotFoundException if the load balancer does not exist
+     */
+    @Override
+    public void enableAvailabilityZonesForLoadBalancer(String loadBalancerName, String... availabilityZones) {
+<span class="nc" id="L360">        throw new UnSupportedFeatureException(&quot;Feature is not Implemented&quot;);</span>
+    }
+
+    /**
+     * Checks if the given load balancer exists.
+     *
+     * @param loadBalancerName load balancer name
+     * @return true if the load balancer no longer exists
+     */
+    @Override
+    public Boolean isDeleted(String loadBalancerName) {
+        try {
+<span class="nc" id="L372">            if (describeLoadBalancers(loadBalancerName).getLoadBalancers()</span>
+<span class="nc" id="L373">                    .stream()</span>
+<span class="nc" id="L374">                    .filter(l -&gt; l.getLoadBalancerName().equalsIgnoreCase(loadBalancerName))</span>
+<span class="nc bnc" id="L375" title="All 2 branches missed.">                    .findFirst().get() != null) {</span>
+<span class="nc" id="L376">                return false;</span>
+            } else {
+<span class="nc" id="L378">                return true;</span>
+            }
+<span class="nc" id="L380">        } catch (Exception e) {</span>
+<span class="nc" id="L381">            throw new RuntimeException(e.getMessage());</span>
+        }
+    }
+
+    /**
+     * Gets the instances attached to the current load balancer
+     *
+     * @param loadBalancerName load balancer name
+     * @return list of AWS instances
+     */
+    @Override
+    public List&lt;Instance&gt; getLoadBalancerInstances(String loadBalancerName) {
+        try {
+<span class="nc" id="L394">            return getAllInstances(loadBalancerName);</span>
+<span class="nc" id="L395">        } catch (Exception e) {</span>
+<span class="nc" id="L396">            throw new ResourceNotFoundException(e.getMessage());</span>
+        }
+    }
+
+    /**
+     * Feature is currently disabled.
+     *
+     * Update the load balancer name.
+     *
+     * @param loadBalancerName old name
+     * @param newLoadBalancerName new name
+     * @throws UnSupportedFeatureException currently feature is disabled
+     */
+    @Override
+    public void changeLoadBalancerName(String loadBalancerName, String newLoadBalancerName) {
+<span class="nc" id="L411">        throw new UnSupportedFeatureException(&quot;Feature is Not Implemented&quot;);</span>
+    }
+
+    /**
+     * Deprecated.
+     * Replaced with describeLoadBalancers().
+     */
+    @Deprecated
+    private DescribeLoadBalancersResult describeLoadBalancersResult(String loadBalancerName) {
+<span class="nc" id="L420">        List&lt;String&gt; loadBalancers = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L421">        loadBalancers.add(loadBalancerName);</span>
+<span class="nc" id="L422">        DescribeLoadBalancersRequest describeLoadBalancersRequest = new DescribeLoadBalancersRequest().withNames(loadBalancers);</span>
+<span class="nc" id="L423">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(describeLoadBalancersRequest);</span>
+    }
+
+    /**
+     * Get all load balancer information for the load balancer with the matching name.
+     *
+     * @param loadBalancerName load balancer name
+     * @return DescribeLoadBalancerResult describe load balancers result
+     */
+    public DescribeLoadBalancersResult describeLoadBalancers(String loadBalancerName) {
+<span class="nc" id="L433">        List&lt;String&gt; loadBalancers = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L434">        loadBalancers.add(loadBalancerName);</span>
+<span class="nc" id="L435">        DescribeLoadBalancersRequest describeLoadBalancersRequest = new DescribeLoadBalancersRequest().withNames(loadBalancers);</span>
+<span class="nc" id="L436">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(describeLoadBalancersRequest);</span>
+    }
+
+    /**
+     * Gets all in service instances attached to the provided load balancer.
+     *
+     * @param albName load balancer name
+     * @return list of instance ids
+     */
+    @Override
+    public List&lt;String&gt; getInServiceInstances(String albName) {
+<span class="nc" id="L447">        return getServiceInstances(albName, &quot;healthy&quot;);</span>
+    }
+
+    /**
+     * Gets all out of service instances attached to the provided load balancer.
+     *
+     * @param albName load balancer name
+     * @return list of instance ids
+     */
+    @Override
+    public List&lt;String&gt; getOutOfServiceInstances(String albName) {
+<span class="nc" id="L458">        return getServiceInstances(albName, &quot;unhealthy&quot;);</span>
+    }
+
+    /**
+     * Get all instances, regardless of service status.
+     *
+     * @param albName load balancer name
+     * @return list of AWS Instances
+     */
+    private List&lt;Instance&gt; getAllInstances(String albName) {
+<span class="nc" id="L468">        List instances = this.getInServiceInstances(albName);</span>
+<span class="nc" id="L469">        instances.addAll(this.getOutOfServiceInstances(albName));</span>
+<span class="nc" id="L470">        return instances;</span>
+    }
+
+    /**
+     * Helper function for getting In or Out Service instances.
+     *
+     * @param albName load balancer name.
+     * @param state state to match
+     * @return list of instance ids
+     */
+    private List&lt;String&gt; getServiceInstances(String albName, String state) {
+<span class="nc" id="L481">        List&lt;String&gt; targetGroupArns = this.getTargetGroupArns(albName);</span>
+<span class="nc" id="L482">        DescribeTargetHealthRequest healthRequest = new DescribeTargetHealthRequest().withTargetGroupArn(targetGroupArns.get(0));</span>
+
+<span class="nc" id="L484">        List&lt;String&gt; instances = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeTargetHealth(healthRequest)</span>
+<span class="nc" id="L485">                .getTargetHealthDescriptions()</span>
+<span class="nc" id="L486">                .parallelStream()</span>
+<span class="nc" id="L487">                .filter(t -&gt; t.getTargetHealth().getState().equalsIgnoreCase(state))</span>
+<span class="nc" id="L488">                .map(TargetHealthDescription::getTarget)</span>
+<span class="nc" id="L489">                .collect(Collectors.toList())</span>
+<span class="nc" id="L490">                .parallelStream()</span>
+<span class="nc" id="L491">                .map(TargetDescription::getId)</span>
+<span class="nc" id="L492">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L494">        Collections.shuffle(instances);</span>
+
+<span class="nc" id="L496">        return instances;</span>
+    }
+
+    /**
+     * Get all target groups for the given load balancer.
+     *
+     * @param albName load balancer name
+     * @return list of target group arns
+     */
+    private List&lt;String&gt; getTargetGroupArns(String albName) {
+<span class="nc" id="L506">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeTargetGroups(new DescribeTargetGroupsRequest().withNames(albName))</span>
+<span class="nc" id="L507">                .getTargetGroups()</span>
+<span class="nc" id="L508">                .parallelStream()</span>
+<span class="nc" id="L509">                .map(TargetGroup::getTargetGroupArn)</span>
+<span class="nc" id="L510">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Duplicate function of deleteSecurityGroups().
+     */
+    @Deprecated
+    public void deleteSecurityGroup(String albName, String securityGroup) {
+<span class="nc" id="L518">        List&lt;String&gt; securityGroups = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L519">        securityGroups.addAll(this.getSecurityGroups(albName));</span>
+        try {
+<span class="nc bnc" id="L521" title="All 2 branches missed.">            if (securityGroup.contains(securityGroup)) {</span>
+<span class="nc" id="L522">                securityGroups.remove(securityGroup);</span>
+<span class="nc" id="L523">                SetSecurityGroupsResult sgResult = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSecurityGroups(new SetSecurityGroupsRequest()</span>
+<span class="nc" id="L524">                        .withLoadBalancerArn(this.getLoadBalancerArn(albName))</span>
+<span class="nc" id="L525">                        .withSecurityGroups(securityGroups));</span>
+            }
+<span class="nc" id="L527">        } catch (Exception ex) {</span>
+<span class="nc" id="L528">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L529">        }</span>
+<span class="nc" id="L530">    }</span>
+
+    /**
+     * Duplicate function of addSecurityGroups().
+     */
+    @Deprecated
+    public void addSecurityGroup(String albName, String securityGroup) {
+<span class="nc" id="L537">        List&lt;String&gt; securityGroups = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L538">        securityGroups.addAll(this.getSecurityGroups(albName));</span>
+        try {
+<span class="nc bnc" id="L540" title="All 2 branches missed.">            if (!securityGroups.contains(securityGroup)) {</span>
+<span class="nc" id="L541">                securityGroups.add(securityGroup);</span>
+
+<span class="nc" id="L543">                applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSecurityGroups(new SetSecurityGroupsRequest()</span>
+<span class="nc" id="L544">                        .withLoadBalancerArn(this.getLoadBalancerArn(albName))</span>
+<span class="nc" id="L545">                        .withSecurityGroups(securityGroups));</span>
+            }
+<span class="nc" id="L547">        } catch (Exception ex) {</span>
+<span class="nc" id="L548">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L549">        }</span>
+
+<span class="nc" id="L551">    }</span>
+
+    /**
+     * Gets all attached security groups to the given load balancer.
+     *
+     * @param albName load balancer name
+     * @return list of security group ids
+     */
+    @Override
+    public List&lt;String&gt; getSecurityGroups(String albName) {
+<span class="nc" id="L561">        return applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(new DescribeLoadBalancersRequest()</span>
+<span class="nc" id="L562">                .withLoadBalancerArns(this.getLoadBalancerArn(albName)))</span>
+<span class="nc" id="L563">                .getLoadBalancers()</span>
+<span class="nc" id="L564">                .parallelStream()</span>
+<span class="nc" id="L565">                .map(l -&gt; l.getSecurityGroups())</span>
+<span class="nc" id="L566">                .findFirst()</span>
+<span class="nc" id="L567">                .get();</span>
+    }
+
+    /**
+     * Detach the given security groups from the specified load balancer.
+     *
+     * @param albName load balancer name
+     * @param securityGroups security group ids
+     */
+    @Override
+    public void deleteSecurityGroups(String albName, String... securityGroups) {
+<span class="nc" id="L578">        List&lt;String&gt; existingSecurityGroups = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L579">        existingSecurityGroups.addAll(this.getSecurityGroups(albName));</span>
+
+        try {
+<span class="nc bnc" id="L582" title="All 2 branches missed.">            if (existingSecurityGroups.containsAll(Arrays.asList(securityGroups))) {</span>
+<span class="nc" id="L583">                existingSecurityGroups.removeAll(Arrays.asList(securityGroups));</span>
+<span class="nc" id="L584">                applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSecurityGroups(new SetSecurityGroupsRequest()</span>
+<span class="nc" id="L585">                        .withLoadBalancerArn(this.getLoadBalancerArn(albName))</span>
+<span class="nc" id="L586">                        .withSecurityGroups(existingSecurityGroups));</span>
+            }
+<span class="nc" id="L588">        } catch (Exception ex) {</span>
+<span class="nc" id="L589">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L590">        }</span>
+<span class="nc" id="L591">    }</span>
+
+    /**
+     * Attach the given security groups to the specified load balancer.
+     *
+     * @param albName load balancer name
+     * @param securityGroups security group ids
+     */
+    @Override
+    public void addSecurityGroups(String albName, String... securityGroups) {
+<span class="nc" id="L601">        List&lt;String&gt; existingSecurityGroups = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L602">        existingSecurityGroups.addAll(this.getSecurityGroups(albName));</span>
+
+        try {
+<span class="nc bnc" id="L605" title="All 2 branches missed.">            if (!existingSecurityGroups.containsAll(Arrays.asList(securityGroups))) {</span>
+<span class="nc" id="L606">                existingSecurityGroups.addAll(Arrays.asList(securityGroups));</span>
+<span class="nc" id="L607">                applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().setSecurityGroups(new SetSecurityGroupsRequest()</span>
+<span class="nc" id="L608">                        .withLoadBalancerArn(this.getLoadBalancerArn(albName))</span>
+<span class="nc" id="L609">                        .withSecurityGroups(existingSecurityGroups));</span>
+            }
+<span class="nc" id="L611">        } catch (Exception ex) {</span>
+<span class="nc" id="L612">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L613">        }</span>
+<span class="nc" id="L614">    }</span>
+
+    /**
+     * Simulates a health check failure.
+     *
+     * Note (11/2017): does not work if the health check ping port is divisible by 7,
+     * will throw illegal state exception.
+     *
+     * @param loadBalancerName load balancer name
+     */
+    @Override
+    public void forceFailLoadbalancerHealthCheck(final String loadBalancerName) {
+<span class="nc" id="L626">        TargetGroup targetGroup = this.validateAndGetExistingTargetGroup(loadBalancerName);</span>
+<span class="nc" id="L627">        int pingPort = targetGroup.getPort();</span>
+<span class="nc" id="L628">        validatePingPort(pingPort);</span>
+<span class="nc" id="L629">        int wrongPingPort = HealthCheckUtils.scramblePingPort(pingPort);</span>
+
+<span class="nc" id="L631">        HealthCheckTarget healthCheckTarget = new HealthCheckTarget();</span>
+<span class="nc" id="L632">        healthCheckTarget.setPingPort(wrongPingPort);</span>
+<span class="nc" id="L633">        updateLoadbalancerHealthCheck(loadBalancerName, healthCheckTarget);</span>
+<span class="nc" id="L634">    }</span>
+
+    /**
+     * Makes sure that the port selected is valid and unscrambled.
+     *
+     * @param pingPort port
+     */
+    private void validatePingPort(int pingPort) {
+<span class="nc bnc" id="L642" title="All 2 branches missed.">        if (HealthCheckUtils.isPingPortScrambled(pingPort))</span>
+<span class="nc" id="L643">            throw new IllegalStateException(&quot;The health check may have already been forced to fail.&quot;);</span>
+<span class="nc" id="L644">    }</span>
+
+    /**
+     * Returns health check to original state.
+     *
+     * Note (11/2017): does not work if force fail method has not yet been called (health check ping port is not divisible by 7),
+     * will throw illegal state exception.
+     *
+     * @param loadBalancerName load balancer name
+     */
+    @Override
+    public void undoForceFailLoadbalancerHealthCheck(final String loadBalancerName) {
+<span class="nc" id="L656">        TargetGroup targetGroup = this.validateAndGetExistingTargetGroup(loadBalancerName);</span>
+<span class="nc" id="L657">        int pingPort = Integer.parseInt(targetGroup.getHealthCheckPort());</span>
+<span class="nc" id="L658">        validateScrambledPingPort(pingPort);</span>
+<span class="nc" id="L659">        int correctPingPort = HealthCheckUtils.unscramblePingPort(pingPort);</span>
+
+<span class="nc" id="L661">        HealthCheckTarget healthCheckTarget = new HealthCheckTarget();</span>
+<span class="nc" id="L662">        healthCheckTarget.setPingPort(correctPingPort);</span>
+<span class="nc" id="L663">        updateLoadbalancerHealthCheck(loadBalancerName, healthCheckTarget);</span>
+<span class="nc" id="L664">    }</span>
+
+    /**
+     * Makes sure that the port selected is valid and already scrambled.
+     *
+     * @param pingPort port
+     */
+    private void validateScrambledPingPort(int pingPort) {
+<span class="nc bnc" id="L672" title="All 2 branches missed.">        if (!HealthCheckUtils.isPingPortScrambled(pingPort))</span>
+<span class="nc" id="L673">            throw new IllegalStateException(&quot;The health check may have not been forced to fail.&quot;);</span>
+<span class="nc" id="L674">    }</span>
+
+    /**
+     * Update the health check settings for the given load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @param healthCheckTarget health check target
+     */
+    @Override
+    public void updateLoadbalancerHealthCheck(String loadBalancerName, HealthCheckTarget healthCheckTarget) {
+<span class="nc" id="L684">        TargetGroup targetGroup = validateAndGetExistingTargetGroup(loadBalancerName);// remove this if this method becomes private</span>
+
+<span class="nc bnc" id="L686" title="All 2 branches missed.">        if (StringUtils.isNullOrEmpty(healthCheckTarget.getPingPath()))</span>
+<span class="nc" id="L687">            healthCheckTarget.setPingPath(targetGroup.getHealthCheckPath());</span>
+<span class="nc bnc" id="L688" title="All 2 branches missed.">        if (healthCheckTarget.getPingProtocol() == null)</span>
+<span class="nc" id="L689">            healthCheckTarget.setPingProtocol(HealthCheckUtils.toPingProtocol(targetGroup.getHealthCheckProtocol()));</span>
+<span class="nc bnc" id="L690" title="All 2 branches missed.">        if (healthCheckTarget.getPingPort() == null) healthCheckTarget.setPingPort(targetGroup.getPort());</span>
+
+
+<span class="nc" id="L693">        ModifyTargetGroupRequest modifyTargetGroupRequest = new ModifyTargetGroupRequest().withTargetGroupArn(targetGroup.getTargetGroupArn())</span>
+<span class="nc" id="L694">                .withHealthCheckPort(healthCheckTarget.getPingPort().toString())</span>
+<span class="nc" id="L695">                .withHealthCheckPath(healthCheckTarget.getPingPath())</span>
+<span class="nc" id="L696">                .withHealthCheckProtocol(healthCheckTarget.getPingProtocol().toString());</span>
+
+<span class="nc" id="L698">        applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().modifyTargetGroup(modifyTargetGroupRequest);</span>
+<span class="nc" id="L699">    }</span>
+
+    /**
+     * Confirms that a load balancer with the given name exists and gets its corresponding target group information.
+     *
+     * @param loadBalancerName load balancer name
+     * @return AWS TargetGroup
+     */
+    private TargetGroup validateAndGetExistingTargetGroup(String loadBalancerName) {
+<span class="nc" id="L708">        String targetGroupArn = this.getTargetGroupArns(loadBalancerName).get(0);</span>
+<span class="nc" id="L709">        DescribeTargetGroupsRequest targetGroupRequest = new DescribeTargetGroupsRequest().withTargetGroupArns(targetGroupArn);</span>
+
+<span class="nc" id="L711">        TargetGroup targetGroup = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeTargetGroups(targetGroupRequest).getTargetGroups().get(0);</span>
+
+<span class="nc bnc" id="L713" title="All 2 branches missed.">        if (targetGroup.getHealthCheckPort().isEmpty())</span>
+<span class="nc" id="L714">            throw new IllegalStateException(&quot;No load balancers exists for &quot; + loadBalancerName);</span>
+
+<span class="nc" id="L716">        return targetGroup;</span>
+    }
+
+    /**
+     * Gets the subnets attached to the specified load balancer.
+     *
+     * @param loadBalancerName load balancer name
+     * @return list of subnet ids
+     */
+    @Override
+    public List&lt;String&gt; getLoadBalancerSubnets(String loadBalancerName) {
+<span class="nc" id="L727">        return new ArrayList&lt;&gt;(getSubnets(loadBalancerName));</span>
+    }
+
+    /**
+     * Gets all the Application or Network Load Balancers associated with the account.
+     *
+     * @return Map of (load balancer name, load balancer type)
+     */
+    @Override
+    public Map&lt;String, String&gt; getLoadBalancerNames() throws ResourceNotFoundException {
+<span class="nc" id="L737">        DescribeLoadBalancersRequest request = new DescribeLoadBalancersRequest();</span>
+<span class="nc" id="L738">        List&lt;String&gt; loadBalancers = applicationLoadBalancerDelegator.getAmazonApplicationLoadBalancing().describeLoadBalancers(request).getLoadBalancers()</span>
+<span class="nc" id="L739">                .stream().map(x -&gt; (x.getLoadBalancerName() + &quot;\t&quot; + x.getType())).collect(Collectors.toList());</span>
+<span class="nc" id="L740">        Map&lt;String, String&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L741" title="All 2 branches missed.">        for (String lb : loadBalancers) {</span>
+<span class="nc" id="L742">            String[] arr = lb.split(&quot;\t&quot;);</span>
+<span class="nc bnc" id="L743" title="All 2 branches missed.">            if (arr[1].equalsIgnoreCase(LoadBalancerTypeEnum.Application.toString())) {</span>
+<span class="nc" id="L744">                map.put(arr[0].toLowerCase(), &quot;ALB&quot;);</span>
+            } else {
+<span class="nc" id="L746">                map.put(arr[0].toLowerCase(), &quot;NLB&quot;);</span>
+            }
+<span class="nc" id="L748">        }</span>
+<span class="nc" id="L749">        return map;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

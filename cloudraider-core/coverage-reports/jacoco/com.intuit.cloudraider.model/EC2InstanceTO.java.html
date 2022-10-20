@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EC2InstanceTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.model</a> &gt; <span class="el_source">EC2InstanceTO.java</span></div><h1>EC2InstanceTO.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.model;
+
+import com.amazonaws.services.ec2.model.Tag;
+
+import java.util.List;
+
+/**
+ * EC2 Transfer Object for representing AWS EC2 instances.
+ */
+<span class="nc" id="L34">public class EC2InstanceTO {</span>
+
+    private String instanceId;
+    private String privateIpAddress;
+    private String stateName;
+    private List&lt;String&gt; securityGroupIds;
+    private String subnetId;
+    private String vpcId;
+    private String imageId;
+    private String availabilityZone;
+    private String loadBalancerName;
+    private List&lt;Tag&gt; tags;
+
+    /**
+     * Gets load balancer name.
+     *
+     * @return the load balancer name
+     */
+    public String getLoadBalancerName() {
+<span class="nc" id="L53">        return loadBalancerName;</span>
+    }
+
+    /**
+     * Sets load balancer name.
+     *
+     * @param loadBalancerName the load balancer name
+     */
+    public void setLoadBalancerName(String loadBalancerName) {
+<span class="nc" id="L62">        this.loadBalancerName = loadBalancerName;</span>
+<span class="nc" id="L63">    }</span>
+
+    /**
+     * Gets instance id.
+     *
+     * @return the instance id
+     */
+    public String getInstanceId() {
+<span class="nc" id="L71">        return instanceId;</span>
+    }
+
+    /**
+     * Sets instance id.
+     *
+     * @param instanceId the instance id
+     */
+    public void setInstanceId(String instanceId) {
+<span class="nc" id="L80">        this.instanceId = instanceId;</span>
+<span class="nc" id="L81">    }</span>
+
+    /**
+     * Gets private ip address.
+     *
+     * @return the private ip address
+     */
+    public String getPrivateIpAddress() {
+<span class="nc" id="L89">        return privateIpAddress;</span>
+    }
+
+    /**
+     * Sets private ip address.
+     *
+     * @param privateIpAddress the private ip address
+     */
+    public void setPrivateIpAddress(String privateIpAddress) {
+<span class="nc" id="L98">        this.privateIpAddress = privateIpAddress;</span>
+<span class="nc" id="L99">    }</span>
+
+    /**
+     * Gets state name.
+     *
+     * @return the state name
+     */
+    public String getStateName() {
+<span class="nc" id="L107">        return stateName;</span>
+    }
+
+    /**
+     * Sets state name.
+     *
+     * @param stateName the state name
+     */
+    public void setStateName(String stateName) {
+<span class="nc" id="L116">        this.stateName = stateName;</span>
+<span class="nc" id="L117">    }</span>
+
+    /**
+     * Gets tags.
+     *
+     * @return the tags
+     */
+    public List&lt;Tag&gt; getTags() {
+<span class="nc" id="L125">        return tags;</span>
+    }
+
+    /**
+     * Sets tags.
+     *
+     * @param tags the tags
+     */
+    public void setTags(List&lt;Tag&gt; tags) {
+<span class="nc" id="L134">        this.tags = tags;</span>
+<span class="nc" id="L135">    }</span>
+
+    /**
+     * Gets availability zone.
+     *
+     * @return the availability zone
+     */
+    public String getAvailabilityZone() {
+<span class="nc" id="L143">        return availabilityZone;</span>
+    }
+
+    /**
+     * Sets availability zone.
+     *
+     * @param availabilityZone the availability zone
+     */
+    public void setAvailabilityZone(String availabilityZone) {
+<span class="nc" id="L152">        this.availabilityZone = availabilityZone;</span>
+<span class="nc" id="L153">    }</span>
+
+    /**
+     * Gets security group ids.
+     *
+     * @return the security group ids
+     */
+    public List&lt;String&gt; getSecurityGroupIds() {
+<span class="nc" id="L161">        return securityGroupIds;</span>
+    }
+
+    /**
+     * Sets security group ids.
+     *
+     * @param securityGroupIds the security group ids
+     */
+    public void setSecurityGroupIds(List&lt;String&gt; securityGroupIds) {
+<span class="nc" id="L170">        this.securityGroupIds = securityGroupIds;</span>
+<span class="nc" id="L171">    }</span>
+
+    /**
+     * Gets subnet id.
+     *
+     * @return the subnet id
+     */
+    public String getSubnetId() {
+<span class="nc" id="L179">        return subnetId;</span>
+    }
+
+    /**
+     * Sets subnet id.
+     *
+     * @param subnetId the subnet id
+     */
+    public void setSubnetId(String subnetId) {
+<span class="nc" id="L188">        this.subnetId = subnetId;</span>
+<span class="nc" id="L189">    }</span>
+
+    /**
+     * Gets vpc id.
+     *
+     * @return the vpc id
+     */
+    public String getVpcId() {
+<span class="nc" id="L197">        return vpcId;</span>
+    }
+
+    /**
+     * Sets vpc id.
+     *
+     * @param vpcId the vpc id
+     */
+    public void setVpcId(String vpcId) {
+<span class="nc" id="L206">        this.vpcId = vpcId;</span>
+<span class="nc" id="L207">    }</span>
+
+    /**
+     * Gets image id.
+     *
+     * @return the image id
+     */
+    public String getImageId() {
+<span class="nc" id="L215">        return imageId;</span>
+    }
+
+    /**
+     * Sets image id.
+     *
+     * @param imageId the image id
+     */
+    public void setImageId(String imageId) {
+<span class="nc" id="L224">        this.imageId = imageId;</span>
+<span class="nc" id="L225">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L229">        return &quot;EC2InstanceTO{&quot; +</span>
+                &quot;instanceId='&quot; + instanceId + '\'' +
+                &quot;, privateIpAddress='&quot; + privateIpAddress + '\'' +
+                &quot;, stateName='&quot; + stateName + '\'' +
+                &quot;, securityGroupIds=&quot; + securityGroupIds +
+                &quot;, subnetId='&quot; + subnetId + '\'' +
+                &quot;, vpcId='&quot; + vpcId + '\'' +
+                &quot;, loadBalancer='&quot; + loadBalancerName + '\'' +
+                &quot;, imageId='&quot; + imageId + '\'' +
+                &quot;, availabilityZone='&quot; + availabilityZone + '\'' +
+                &quot;, tags=&quot; + tags +
+                '}';
+    }
+
+
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L245" title="All 2 branches missed.">        if (o == this) {</span>
+<span class="nc" id="L246">            return true;</span>
+        }
+<span class="nc bnc" id="L248" title="All 2 branches missed.">        if (!(o instanceof EC2InstanceTO)) {</span>
+<span class="nc" id="L249">            return false;</span>
+        }
+
+<span class="nc" id="L252">        EC2InstanceTO ec2InstanceTO = (EC2InstanceTO)o;</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">        return instanceId == ec2InstanceTO.instanceId;</span>
+    }
+
+    public int hashCode() {
+<span class="nc" id="L257">        int result = 17;</span>
+<span class="nc" id="L258">        result = 31 * result + instanceId.hashCode();</span>
+<span class="nc" id="L259">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

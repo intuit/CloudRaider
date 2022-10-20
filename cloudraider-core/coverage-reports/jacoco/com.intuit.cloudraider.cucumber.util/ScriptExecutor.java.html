@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScriptExecutor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.util</a> &gt; <span class="el_source">ScriptExecutor.java</span></div><h1>ScriptExecutor.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.util;
+
+import com.intuit.cloudraider.core.interfaces.SystemRaider;
+import com.intuit.cloudraider.model.Actions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.io.File;
+
+/**
+ * For a specific instance, execute EC2 failures by running a respective script.
+ */
+@Component(value=&quot;scriptExecutor&quot;)
+public class ScriptExecutor {
+
+    @Autowired
+    private SystemRaider systemRaider;
+
+    /**
+     * Instantiates a new Script executor.
+     */
+<span class="nc" id="L46">    public ScriptExecutor() {</span>
+
+<span class="nc" id="L48">    }</span>
+
+    /**
+     * Execute process termination.
+     *
+     * @param ip          the ip
+     * @param processName the process name
+     */
+    public void executeProcessTermination(String ip, String processName) {
+<span class="nc" id="L57">        this.executeScript(Actions.KILLPROCESS, ip, processName);</span>
+<span class="nc" id="L58">    }</span>
+
+    /**
+     * Execute disk full.
+     *
+     * @param ip         the ip
+     * @param volumeType the volume type
+     * @param size       the size
+     */
+    public void executeDiskFull(String ip, String volumeType, int size) {
+<span class="nc" id="L68">        this.executeScript(Actions.DISKFULL, ip, volumeType, String.valueOf(size));</span>
+<span class="nc" id="L69">    }</span>
+
+    /**
+     * Execute cpu spike.
+     *
+     * @param ip    the ip
+     * @param cores the cores
+     */
+    public void executeCPUSpike(String ip, int cores) {
+<span class="nc" id="L78">        this.executeScript(Actions.SPIKECPU, ip, String.valueOf(cores), &quot;3&quot;);</span>
+<span class="nc" id="L79">    }</span>
+
+    /**
+     * Execute stop process.
+     *
+     * @param ip          the ip
+     * @param processName the process name
+     */
+    public void executeStopProcess(String ip, String processName) {
+<span class="nc" id="L88">        this.executeScript(Actions.STOPSERVICE, ip, processName);</span>
+<span class="nc" id="L89">    }</span>
+
+    /**
+     * Execute start process.
+     *
+     * @param ip          the ip
+     * @param processName the process name
+     */
+    public void executeStartProcess(String ip, String processName) {
+<span class="nc" id="L98">        this.executeScript(Actions.STARTSERVICE, ip, processName);</span>
+<span class="nc" id="L99">    }</span>
+
+    /**
+     * Execute random network latency.
+     *
+     * @param ip              the ip
+     * @param upperRangeDelay the upper range delay
+     * @param lowerRangeDelay the lower range delay
+     */
+    public void executeRandomNetworkLatency(String ip, String upperRangeDelay, String lowerRangeDelay) {
+<span class="nc" id="L109">        this.executeScript(Actions.DELAYNETWORK, ip, upperRangeDelay, lowerRangeDelay);</span>
+<span class="nc" id="L110">    }</span>
+
+    /**
+     * Execute network latency.
+     *
+     * @param ip    the ip
+     * @param delay the delay
+     */
+    public void executeNetworkLatency(String ip, String delay) {
+<span class="nc" id="L119">        this.executeScript(Actions.DELAYNETWORK, ip, delay);</span>
+<span class="nc" id="L120">    }</span>
+
+    /**
+     * Execute random domain network latency.
+     *
+     * @param ip              the ip
+     * @param upperRangeDelay the upper range delay
+     * @param lowerRangeDelay the lower range delay
+     * @param domainName      the domain name
+     */
+    public void executeRandomDomainNetworkLatency( String ip, String upperRangeDelay, String lowerRangeDelay, String domainName)
+    {
+<span class="nc" id="L132">        this.executeScript(Actions.DELAYDOMAINNETWORK, ip, upperRangeDelay, lowerRangeDelay, domainName);</span>
+<span class="nc" id="L133">    }</span>
+
+
+    /**
+     * Execute network packet loss.
+     *
+     * @param ip             the ip
+     * @param lossPercentage the loss percentage
+     */
+    public void executeNetworkPacketLoss(String ip, String lossPercentage) {
+<span class="nc" id="L143">        this.executeScript(Actions.PACKETLOSS, ip, lossPercentage);</span>
+<span class="nc" id="L144">    }</span>
+
+    /**
+     * Execute block domain.
+     *
+     * @param ip         the ip
+     * @param domainName the domain name
+     */
+    public void executeBlockDomain(String ip, String domainName) {
+<span class="nc" id="L153">        this.executeScript(Actions.BLOCKDOMAIN, ip, domainName);</span>
+<span class="nc" id="L154">    }</span>
+
+    /**
+     * Execute block port.
+     *
+     * @param ip      the ip
+     * @param portNum the port num
+     */
+    public void executeBlockPort(String ip, String portNum) {
+<span class="nc" id="L163">        this.executeScript(Actions.BLOCKPORT, ip, portNum);</span>
+<span class="nc" id="L164">    }</span>
+
+
+    /**
+     * Execute block dynamo db.
+     *
+     * @param ip the ip
+     */
+    public void executeBlockDynamoDB(String ip)
+    {
+<span class="nc" id="L174">        this.executeScript(Actions.BLOCKDYNAMO, ip, null);</span>
+<span class="nc" id="L175">    }</span>
+
+    /**
+     * Execute block s 3.
+     *
+     * @param ip the ip
+     */
+    public void executeBlockS3 (String ip)
+    {
+<span class="nc" id="L184">        this.executeScript(Actions.BLOCKS3, ip, null);</span>
+<span class="nc" id="L185">    }</span>
+
+    /**
+     * Execute un block domain.
+     *
+     * @param ip         the ip
+     * @param domainName the domain name
+     */
+    public void executeUnBlockDomain( String ip, String domainName)
+    {
+<span class="nc" id="L195">        this.executeScript(Actions.UNBLOCKDOMAIN, ip, domainName);</span>
+<span class="nc" id="L196">    }</span>
+
+    /**
+     * Executes the script matching the action specified with the given arguments on the instance with the provided ip address.
+     *
+     * @param action    ENUM action
+     * @param ip        ip address of instance
+     * @param arguments arguments for the given action
+     */
+    public void executeScript(Actions action, String ip, String... arguments) {
+<span class="nc" id="L206">        String fileName = action.getActionName() + &quot;.sh&quot;;</span>
+<span class="nc" id="L207">        File file = new File(ClassLoader.getSystemResource(fileName).getFile());</span>
+
+<span class="nc" id="L209">        systemRaider.executeScript(ip, file.getAbsolutePath(), arguments);</span>
+<span class="nc" id="L210">    }</span>
+
+    /**
+     * Executes the script matching the action specified with the given arguments on the instance with the provided ip address.
+     *
+     * @param action    String name of the action
+     * @param ip        ip address of instance
+     * @param arguments arguments for the given action
+     */
+    public void executeScript(String action, String ip, String... arguments) {
+<span class="nc" id="L220">        String fileName = action + &quot;.sh&quot;;</span>
+<span class="nc" id="L221">        File file = new File(ClassLoader.getSystemResource(fileName).getFile());</span>
+
+<span class="nc" id="L223">        systemRaider.executeScript(ip, file.getAbsolutePath(), arguments);</span>
+<span class="nc" id="L224">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

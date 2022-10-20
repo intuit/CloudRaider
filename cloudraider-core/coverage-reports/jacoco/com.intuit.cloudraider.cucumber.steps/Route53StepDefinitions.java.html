@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Route53StepDefinitions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.steps</a> &gt; <span class="el_source">Route53StepDefinitions.java</span></div><h1>Route53StepDefinitions.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.steps;
+
+import com.intuit.cloudraider.core.interfaces.Route53Raider;
+import com.intuit.cloudraider.cucumber.model.ExecutionStateCache;
+import com.intuit.cloudraider.cucumber.util.DNSLookup;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import java.util.Arrays;
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
+
+/**
+ * Cucumber Step Definitions for AWS Route 53 functionality.
+ */
+public class Route53StepDefinitions {
+
+    @Autowired
+    private ExecutionStateCache executionStateCache;
+
+    @Autowired
+    @Qualifier(&quot;r53RaiderBean&quot;)
+    private Route53Raider route53Raider;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L60">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+
+    private String r53HealthCheckId;
+    private String r53PolicyName;
+
+    /**
+     * Gets execution state cache.
+     *
+     * @return the execution state cache
+     */
+    public ExecutionStateCache getExecutionStateCache() {
+<span class="nc" id="L72">        return executionStateCache;</span>
+    }
+
+    /**
+     * Sets execution state cache.
+     *
+     * @param executionStateCache the execution state cache
+     */
+    public void setExecutionStateCache(ExecutionStateCache executionStateCache) {
+<span class="nc" id="L81">        this.executionStateCache = executionStateCache;</span>
+<span class="nc" id="L82">    }</span>
+
+    /**
+     * Instantiates a new Route 53 step definitions.
+     */
+<span class="nc" id="L87">    public Route53StepDefinitions() {</span>
+
+<span class="nc" id="L89">    }</span>
+
+    /**
+     * Asserts that the r53 failover from the primary endpoint to the secondary endpoint succeeds
+     *
+     * @param primary   endpoint
+     * @param secondary RegEx or endpoint
+     * @throws Throwable the throwable
+     */
+    @Then(&quot;^assertTrue R53 failover from \&quot;([^\&quot;]*)\&quot; to \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertTrueR53Failover(String primary, String secondary) throws Throwable {
+<span class="nc bnc" id="L100" title="All 2 branches missed.">        if (!isRegex(secondary)) {</span>
+<span class="nc" id="L101">            Assert.assertTrue(&quot;DNS Failover Check succeeded&quot;, DNSLookup.hostNameLookup(primary).equalsIgnoreCase(secondary));</span>
+        } else {
+<span class="nc" id="L103">            Assert.assertTrue(&quot;DNS Failover Check succeeded&quot;, DNSLookup.hostNameLookup(primary).matches(secondary));</span>
+        }
+<span class="nc" id="L105">    }</span>
+
+    /**
+     * Asserts that the r53 failover from the primary endpoint to the secondary endpoint fails
+     *
+     * @param primary   endpoint
+     * @param secondary RegEx or endpoint
+     * @throws Throwable the throwable
+     */
+    @Then(&quot;^assertFalse R53 failover from \&quot;([^\&quot;]*)\&quot; to \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertFalseR53Failover(String primary, String secondary) throws Throwable {
+<span class="nc bnc" id="L116" title="All 2 branches missed.">        if (!isRegex(secondary)) {</span>
+<span class="nc" id="L117">            Assert.assertFalse(&quot;DNS Failover Check failed&quot;, DNSLookup.hostNameLookup(primary).equalsIgnoreCase(secondary));</span>
+        } else {
+<span class="nc" id="L119">            Assert.assertFalse(&quot;DNS Failover Check failed&quot;, DNSLookup.hostNameLookup(primary).matches(secondary));</span>
+        }
+<span class="nc" id="L121">    }</span>
+
+    /**
+     * Sets the r53 health check id.
+     *
+     * @param r53HealthCheckId health check id
+     * @return the route 53 step definitions
+     */
+    @Given(&quot;^R53 Healthcheck ID \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public Route53StepDefinitions givenR53HealthCheckID(String r53HealthCheckId) {
+<span class="nc" id="L131">        this.r53HealthCheckId = r53HealthCheckId;</span>
+<span class="nc" id="L132">        return this;</span>
+    }
+
+    /**
+     * Assert that the previously set health check id has the same status as the expected.
+     *
+     * @param expectedState expected state
+     */
+    @Then(&quot;^assertR53 HealthCheck state = \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertCloudWatchAlarmState(String expectedState) {
+<span class="nc" id="L142">        logger.info(&quot;Route53 healtch check for id: &quot;+ r53HealthCheckId+ &quot; = &quot; + route53Raider.getSimpleHealthCheckerStatus(r53HealthCheckId));</span>
+<span class="nc" id="L143">        org.testng.Assert.assertEquals(route53Raider.getSimpleHealthCheckerStatus(r53HealthCheckId).toString(), expectedState);</span>
+<span class="nc" id="L144">    }</span>
+
+    /**
+     * Assert that the provided health check id has the same status as the expected.
+     *
+     * @param route53HealthCheckId health check id
+     * @param expectedState        expected state
+     */
+    @Then(&quot;^assertR53 HealthCheckId \&quot;([^\&quot;]*)\&quot; with state = \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertCloudWatchAlarmState(String route53HealthCheckId, String expectedState) {
+<span class="nc" id="L154">        logger.info(&quot;Route53 healtch check for id: &quot;+ r53HealthCheckId+ &quot; = &quot; + route53Raider.getSimpleHealthCheckerStatus(r53HealthCheckId));</span>
+<span class="nc" id="L155">        logger.info(&quot;Route53 healtch check for id: &quot;+ r53HealthCheckId+ &quot; = &quot; + route53Raider.getSimpleHealthCheckerStatus(r53HealthCheckId));</span>
+<span class="nc" id="L156">        org.testng.Assert.assertEquals(route53Raider.getSimpleHealthCheckerStatus(route53HealthCheckId).toString(), expectedState);</span>
+<span class="nc" id="L157">    }</span>
+
+    /**
+     * Sets the r53 policy name to the one specified.
+     *
+     * @param r53PolicyName policy name
+     * @return the route 53 step definitions
+     * @throws Throwable the throwable
+     */
+    @Given(&quot;^R53 traffic policy name \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public Route53StepDefinitions giveR53TrafficPolicyName(String r53PolicyName) throws Throwable {
+<span class="nc" id="L168">        this.r53PolicyName = r53PolicyName;</span>
+<span class="nc" id="L169">        return this;</span>
+    }
+
+    /**
+     * Updates the r53 traffic policy version to the one specified.
+     *
+     * @param version version number
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^R53 update traffic policy version to (\\d+)$&quot;)
+    public void updateR53PolicyVersion(int version) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L181">        route53Raider.updateTrafficPolicy(r53PolicyName, version);</span>
+<span class="nc" id="L182">    }</span>
+
+    /**
+     * Assert that the r53 traffic policy version matches the one specified.
+     *
+     * @param expectedVersion version number
+     * @throws Throwable the throwable
+     */
+    @Then(&quot;^assertR53 traffic policy versionId = (\\d+)$&quot;)
+    public void assertR53VersionId(int expectedVersion) throws Throwable {
+<span class="nc" id="L192">        org.testng.Assert.assertEquals(route53Raider.getTrafficPolicyVersion(r53PolicyName), expectedVersion);</span>
+<span class="nc" id="L193">    }</span>
+
+    /**
+     * Updates the r53 health check regions to only the ones specified.
+     *
+     * @param regions regions to update
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^R53 update HealthCheck regions to \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void updatR53HealthCheckRegions(String regions) throws Throwable {
+<span class="nc" id="L203">        List&lt;String&gt; regionsList = Arrays.asList(regions.split(&quot;\\s*,\\s*&quot;));</span>
+<span class="nc" id="L204">        route53Raider.updateHealthCheckRegions(r53HealthCheckId, regionsList);</span>
+<span class="nc" id="L205">    }</span>
+
+    /**
+     * Assert that the r53 health check regions include the ones specified.
+     *
+     * @param regions regions to check; separated by &quot;,&quot; (comma)
+     * @throws Throwable the throwable
+     */
+    @Then(&quot;^assertR53 HealthCheck regions = \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertR53HealthCheckRegions(String regions) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L216">        List&lt;String&gt; expectedRegionsList = Arrays.asList(regions.split(&quot;\\s*,\\s*&quot;));</span>
+<span class="nc" id="L217">        assertThat(route53Raider.getHealthCheckRegions(r53HealthCheckId), containsInAnyOrder(expectedRegionsList.toArray()));</span>
+
+<span class="nc" id="L219">    }</span>
+
+    /**
+     * Resets the R53 health check to the default regions
+     *
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^R53 reset HealthCheck to default regions$&quot;)
+    public void resetR53HealthCheckRegions() throws Throwable {
+<span class="nc" id="L228">        route53Raider.updateHealthCheckToDefaultRegions(r53HealthCheckId);</span>
+<span class="nc" id="L229">    }</span>
+
+    /**
+     * Checks if the string is a regular expression
+     *
+     * @param str string to analyze
+     * @return true if the string is a regular expression
+     */
+    private boolean isRegex(final String str) {
+        try {
+<span class="nc" id="L239">            java.util.regex.Pattern.compile(str);</span>
+<span class="nc" id="L240">            return true;</span>
+<span class="nc" id="L241">        } catch (java.util.regex.PatternSyntaxException e) {</span>
+<span class="nc" id="L242">            return false;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

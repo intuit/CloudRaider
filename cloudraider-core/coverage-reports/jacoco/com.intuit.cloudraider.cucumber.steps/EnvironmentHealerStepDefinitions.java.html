@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EnvironmentHealerStepDefinitions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.steps</a> &gt; <span class="el_source">EnvironmentHealerStepDefinitions.java</span></div><h1>EnvironmentHealerStepDefinitions.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.steps;
+
+import com.intuit.cloudraider.core.interfaces.SSMRaider;
+import com.intuit.cloudraider.cucumber.model.ExecutionStateCache;
+import com.intuit.cloudraider.cucumber.util.ScriptExecutor;
+import com.intuit.cloudraider.model.Actions;
+import com.intuit.cloudraider.model.Command;
+import com.intuit.cloudraider.model.EC2InstanceTO;
+import com.intuit.cloudraider.utils.CommandUtility;
+import com.intuit.cloudraider.utils.Ec2Utils;
+import cucumber.api.java.en.Then;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Cucumber Step Definitions for restoring AWS infrastructure to previous state.
+ */
+public class EnvironmentHealerStepDefinitions {
+
+    @Autowired
+    @Qualifier(&quot;scriptExecutor&quot;)
+    private ScriptExecutor scriptExecutor;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L56">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    @Qualifier(&quot;ssmRaiderBean&quot;)
+    private SSMRaider ssmRaider;
+
+    @Autowired
+    private ExecutionStateCache executionStateCache;
+
+    public ExecutionStateCache getExecutionStateCache() {
+<span class="nc" id="L66">        return executionStateCache;</span>
+    }
+
+    public void setExecutionStateCache(ExecutionStateCache executionStateCache) {
+<span class="nc" id="L70">        this.executionStateCache = executionStateCache;</span>
+<span class="nc" id="L71">    }</span>
+
+<span class="nc" id="L73">    public EnvironmentHealerStepDefinitions() {</span>
+
+<span class="nc" id="L75">    }</span>
+
+    /**
+     * Recovers from instance-specific failures (other than termination and hard disk manipulation) during testing.
+     */
+    @Then(&quot;^recover$&quot;)
+    public void recover() {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        boolean isSSM = !executionStateCache.getSsmCommandInvocationInstances().isEmpty();</span>
+
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (executionStateCache.isHealProcess()) {</span>
+<span class="nc" id="L85">            List&lt;String&gt; processes = executionStateCache.getProcessNames();</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">            for (String process : processes) {</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">                if (isSSM) {</span>
+
+<span class="nc" id="L89">                    healGivenSSMInstancesByProcess(process, executionStateCache.getSsmCommandInvocationInstances());</span>
+                } else {
+<span class="nc" id="L91">                    healGivenInstancesByProcess(process, executionStateCache.getUnhealthyInstances());</span>
+                }
+<span class="nc" id="L93">            }</span>
+        }
+
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (executionStateCache.isHealNetwork()) {</span>
+
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (isSSM) {</span>
+<span class="nc" id="L99">                healSSMGivenInstancesFixingNetworkIssues(executionStateCache.getSsmCommandInvocationInstances());</span>
+            }
+            else {
+<span class="nc" id="L102">                healGivenInstancesFixingNetworkIssues(executionStateCache.getUnhealthyInstances());</span>
+            }
+        }
+
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (!executionStateCache.getBlockedDomains().isEmpty()) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">            if (isSSM) {</span>
+
+<span class="nc" id="L109">                executionStateCache.getBlockedDomains().parallelStream()</span>
+<span class="nc" id="L110">                        .forEach(domain -&gt; healSSMGivenInstancesByDomainName(domain, executionStateCache.getSsmCommandInvocationInstances()));</span>
+            } else {
+<span class="nc" id="L112">                executionStateCache.getBlockedDomains().parallelStream()</span>
+<span class="nc" id="L113">                        .forEach(domain -&gt; healGivenInstancesByDomainName(domain, executionStateCache.getUnhealthyInstances()));</span>
+            }
+        }
+
+<span class="nc bnc" id="L117" title="All 2 branches missed.">        if (executionStateCache.isCpuSpiked()) {</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">            if (isSSM) {</span>
+
+<span class="nc" id="L120">                healSSMGivenInstancesByFixingCPU(executionStateCache.getSsmCommandInvocationInstances());</span>
+            } else {
+<span class="nc" id="L122">                healGivenInstancesByFixingCPU(executionStateCache.getUnhealthyInstances());</span>
+            }
+        }
+
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (executionStateCache.isBlockPort()) {</span>
+<span class="nc" id="L127">            List&lt;Integer&gt; portNums = executionStateCache.getPortNums();</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">            for (Integer port : portNums) {</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                if (isSSM) {</span>
+
+<span class="nc" id="L131">                    healSSMGivenInstancesByFixingPort(port, executionStateCache.getSsmCommandInvocationInstances());</span>
+                } else {
+<span class="nc" id="L133">                    healGivenInstancesByFixingPort(executionStateCache.getUnhealthyInstances());</span>
+                }
+<span class="nc" id="L135">            }</span>
+        }
+
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (executionStateCache.isRamDiskFull()) {</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">            if (isSSM) {</span>
+<span class="nc" id="L140">                healSSMGivenInstancesByFixingRamDisk(executionStateCache.getSsmCommandInvocationInstances());</span>
+            } else {
+<span class="nc" id="L142">                healGivenInstancesByFixingRamDisk(executionStateCache.getUnhealthyInstances());</span>
+            }
+        }
+
+
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        if (executionStateCache.isBlockDynamoDB())</span>
+        {
+<span class="nc bnc" id="L149" title="All 2 branches missed.">            if (isSSM) {</span>
+
+<span class="nc" id="L151">                healSSMGivenInstancesByUnblockingDynamoDB(executionStateCache.getSsmCommandInvocationInstances());</span>
+            }
+            else
+            {
+<span class="nc" id="L155">                healGivenInstancesByUnblockingDynamoDB(executionStateCache.getUnhealthyInstances());</span>
+
+            }
+        }
+
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (executionStateCache.isBlockS3())</span>
+        {
+<span class="nc bnc" id="L162" title="All 2 branches missed.">            if (isSSM) {</span>
+
+<span class="nc" id="L164">                healSSMGivenInstancesByUnblockingS3(executionStateCache.getSsmCommandInvocationInstances());</span>
+            }
+            else
+            {
+<span class="nc" id="L168">                healGivenInstancesByUnblockingS3(executionStateCache.getUnhealthyInstances());</span>
+
+            }
+        }
+
+
+<span class="nc" id="L174">    }</span>
+
+    @Then(&quot;^clearCache$&quot;)
+    public void clearCache() {
+
+<span class="nc" id="L179">        executionStateCache.clear();</span>
+<span class="nc" id="L180">    }</span>
+
+        /**
+         * Restarts the process on the given instances.
+         *
+         * @param processName process name
+         * @param instances instances to heal
+         */
+    public EnvironmentHealerStepDefinitions healGivenInstancesByProcess(String processName, List&lt;EC2InstanceTO&gt; instances)
+    {
+
+<span class="nc" id="L191">        instances.parallelStream()</span>
+<span class="nc" id="L192">                .forEach(i -&gt;</span>
+                {
+<span class="nc" id="L194">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L195">                    scriptExecutor.executeScript(&quot;healInstance&quot;, ip, processName);</span>
+<span class="nc" id="L196">                });</span>
+
+<span class="nc" id="L198">        return this;</span>
+    }
+
+    /**
+     * Unblock the domain name for the given instances.
+     *
+     * @param domainName domain name
+     * @param instances instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenInstancesByDomainName(String domainName, List&lt;EC2InstanceTO&gt; instances) {
+
+<span class="nc" id="L209">        instances.parallelStream()</span>
+<span class="nc" id="L210">                .forEach(i -&gt;</span>
+                {
+<span class="nc" id="L212">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L213">                    scriptExecutor.executeScript(Actions.UNBLOCKDOMAIN, ip, domainName);</span>
+<span class="nc" id="L214">                });</span>
+
+<span class="nc" id="L216">        return this;</span>
+    }
+
+    /**
+     * Fix RAM Disk Full for the given instances.
+     *
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenInstancesByFixingRamDisk(List&lt;EC2InstanceTO&gt; instanceList) {
+
+<span class="nc" id="L226">        instanceList.parallelStream()</span>
+<span class="nc" id="L227">                .forEach(i -&gt;</span>
+                {
+<span class="nc" id="L229">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L230">                    scriptExecutor.executeScript(&quot;clear-ramdiskfull.sh&quot;, ip);</span>
+<span class="nc" id="L231">                });</span>
+
+<span class="nc" id="L233">        return this;</span>
+    }
+
+    /**
+     * Clear network failures/latency for the given instances.
+     *
+     * @param instances instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenInstancesByFixingNetworkIssues(List&lt;EC2InstanceTO&gt; instances) {
+
+<span class="nc" id="L243">        instances.parallelStream()</span>
+<span class="nc" id="L244">                .forEach(i -&gt;</span>
+                {
+<span class="nc" id="L246">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L247">                    scriptExecutor.executeScript(&quot;clear-networkfailures&quot;, ip);</span>
+<span class="nc" id="L248">                });</span>
+
+<span class="nc" id="L250">        return this;</span>
+    }
+
+    /**
+     * Stops CPU spike on the given instances.
+     *
+     * @param instances instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenInstancesByFixingCPU(List&lt;EC2InstanceTO&gt; instances) {
+
+<span class="nc" id="L260">        instances.parallelStream()</span>
+<span class="nc" id="L261">                .forEach(i -&gt;</span>
+                {
+<span class="nc" id="L263">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L264">                    scriptExecutor.executeScript(&quot;killcpuspike&quot;, ip);</span>
+<span class="nc" id="L265">                });</span>
+
+<span class="nc" id="L267">        return this;</span>
+    }
+
+    /**
+     * Unblocks all ports for the given instances.
+     *
+     * @param instances instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenInstancesByFixingPort(List&lt;EC2InstanceTO&gt; instances) {
+
+<span class="nc" id="L277">        instances.parallelStream()</span>
+<span class="nc" id="L278">                .forEach(i -&gt;</span>
+                {
+<span class="nc" id="L280">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L281">                    scriptExecutor.executeScript(Actions.UNBLOCKPORT, ip);</span>
+<span class="nc" id="L282">                });</span>
+
+<span class="nc" id="L284">        return this;</span>
+    }
+
+    /**
+     * [SSM] Stops CPU spike on the given instances.
+     *
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesByFixingCPU(List&lt;EC2InstanceTO&gt; instanceList) {
+
+<span class="nc" id="L294">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(&quot;killcpuspikeCommand.txt&quot;);</span>
+<span class="nc" id="L295">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList), commands);</span>
+<span class="nc" id="L296">        return this;</span>
+    }
+
+    /**
+     * [SSM] Clear network failures/latency for the given instances.
+     *
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesFixingNetworkIssues(List&lt;EC2InstanceTO&gt; instanceList )
+    {
+
+<span class="nc" id="L307">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(&quot;clear-networkfailuresCommand.txt&quot;);</span>
+<span class="nc" id="L308">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList),commands);</span>
+<span class="nc" id="L309">        return this;</span>
+    }
+
+    /**
+     * Clear network failures/latency for the given instances.
+     *
+     * @param instances instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenInstancesFixingNetworkIssues(List&lt;EC2InstanceTO&gt; instances )
+    {
+
+<span class="nc" id="L320">        instances.parallelStream()</span>
+<span class="nc" id="L321">                .forEach( i -&gt;</span>
+                {
+<span class="nc" id="L323">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L324">                    scriptExecutor.executeScript(&quot;clear-networkfailures&quot;, ip);</span>
+<span class="nc" id="L325">                });</span>
+
+<span class="nc" id="L327">        return this;</span>
+    }
+
+
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesByUnblockingDynamoDB(List&lt;EC2InstanceTO&gt; instanceList )
+    {
+
+<span class="nc" id="L334">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(Command.UNBLOCKDYNAMODB.getCommandName()+&quot;.txt&quot;);</span>
+<span class="nc" id="L335">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList),commands);</span>
+<span class="nc" id="L336">        executionStateCache.setBlockDynamoDB(false);</span>
+<span class="nc" id="L337">        return this;</span>
+    }
+
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesByUnblockingS3(List&lt;EC2InstanceTO&gt; instanceList )
+    {
+
+<span class="nc" id="L343">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(Command.UNBLOCKS3.getCommandName()+&quot;.txt&quot;);</span>
+<span class="nc" id="L344">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList),commands);</span>
+<span class="nc" id="L345">        executionStateCache.setBlockS3(false);</span>
+<span class="nc" id="L346">        return this;</span>
+    }
+
+    /**
+     * [SSM] Unblocks the given port on the provided instances.
+     *
+     * @param portNum port number
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesByFixingPort(int portNum, List&lt;EC2InstanceTO&gt; instanceList) {
+
+<span class="nc" id="L357">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(Command.UNBLOCKPORT.getCommandName() + &quot;.txt&quot;, String.valueOf(portNum));</span>
+<span class="nc" id="L358">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList), commands);</span>
+<span class="nc" id="L359">        return this;</span>
+    }
+
+    /**
+     * [SSM] Restarts the process on the given instances.
+     *
+     * @param processName process to restart
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healGivenSSMInstancesByProcess(String processName, List&lt;EC2InstanceTO&gt; instanceList) {
+<span class="nc" id="L369">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(&quot;healCommand.txt&quot;, processName);</span>
+
+<span class="nc" id="L371">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList), commands);</span>
+<span class="nc" id="L372">        return this;</span>
+
+    }
+
+    /**
+     * [SSM] Unblock the domain name for the given instances.
+     *
+     * @param domainName domain name
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesByDomainName(String domainName, List&lt;EC2InstanceTO&gt; instanceList) {
+
+<span class="nc" id="L384">        List&lt;String&gt; commands = CommandUtility.getCommandsFromFile(Command.UNBLOCKDOMAIN.getCommandName() + &quot;.txt&quot;, domainName);</span>
+<span class="nc" id="L385">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList), commands);</span>
+<span class="nc" id="L386">        return this;</span>
+    }
+
+    /**
+     * [SSM] Fix RAM Disk Full for the given instances.
+     *
+     * @param instanceList instances to heal
+     */
+    public EnvironmentHealerStepDefinitions healSSMGivenInstancesByFixingRamDisk(List&lt;EC2InstanceTO&gt; instanceList) {
+
+<span class="nc" id="L396">        List&lt;String&gt; commands = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L397">        commands.add(&quot;sudo rm /dev/shm/remove_me&quot;);</span>
+<span class="nc" id="L398">        String commandId = ssmRaider.executeShellCommands(Ec2Utils.generateInstanceIdList(instanceList), commands);</span>
+<span class="nc" id="L399">        return this;</span>
+    }
+
+        /**
+         * [SSM] Fix DynamoDB failure
+         *
+         * @param instances instances to heal
+         */
+
+    public EnvironmentHealerStepDefinitions healGivenInstancesByUnblockingDynamoDB(List&lt;EC2InstanceTO&gt; instances )
+    {
+
+<span class="nc" id="L411">        instances.parallelStream()</span>
+<span class="nc" id="L412">                .forEach( i -&gt;</span>
+                {
+<span class="nc" id="L414">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L415">                    scriptExecutor.executeScript(Actions.UNBLOCKDYNAMO, ip);</span>
+<span class="nc" id="L416">                });</span>
+
+
+<span class="nc" id="L419">        executionStateCache.setBlockDynamoDB(false);</span>
+
+<span class="nc" id="L421">        return this;</span>
+    }
+
+        /**
+         * [SSM] Fix S3 failure
+         *
+         * @param instances instances to heal
+         */
+
+    public EnvironmentHealerStepDefinitions healGivenInstancesByUnblockingS3(List&lt;EC2InstanceTO&gt; instances )
+    {
+
+<span class="nc" id="L433">        instances.parallelStream()</span>
+<span class="nc" id="L434">                .forEach( i -&gt;</span>
+                {
+<span class="nc" id="L436">                    String ip = i.getPrivateIpAddress();</span>
+<span class="nc" id="L437">                    scriptExecutor.executeScript(Actions.UNBLOCKS3, ip);</span>
+<span class="nc" id="L438">                });</span>
+
+<span class="nc" id="L440">        executionStateCache.setBlockS3(false);</span>
+
+<span class="nc" id="L442">        return this;</span>
+    }
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

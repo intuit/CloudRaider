@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CloudWatchStepDefinitions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.steps</a> &gt; <span class="el_source">CloudWatchStepDefinitions.java</span></div><h1>CloudWatchStepDefinitions.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.steps;
+
+import com.intuit.cloudraider.core.interfaces.CloudWatchRaider;
+import com.intuit.cloudraider.cucumber.model.ExecutionStateCache;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.testng.Assert;
+
+/**
+ * Cucumber Step Definitions for CloudWatch functionality.
+ */
+public class CloudWatchStepDefinitions {
+
+    @Autowired
+    @Qualifier(&quot;cwRaiderBean&quot;)
+    private CloudWatchRaider cloudWatchRaider;
+    private String alarmName;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L50">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private ExecutionStateCache executionStateCache;
+
+    public ExecutionStateCache getExecutionStateCache() {
+<span class="nc" id="L56">        return executionStateCache;</span>
+    }
+
+    public void setExecutionStateCache(ExecutionStateCache executionStateCache) {
+<span class="nc" id="L60">        this.executionStateCache = executionStateCache;</span>
+<span class="nc" id="L61">    }</span>
+
+<span class="nc" id="L63">    public CloudWatchStepDefinitions() {</span>
+
+<span class="nc" id="L65">    }</span>
+
+    /**
+     * Sets CloudWatch alarm to observe.
+     *
+     * @param alarmName String alarm name
+     */
+    @Given(&quot;^CloudWatch Alarm \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public CloudWatchStepDefinitions givenAnAlarmName(String alarmName) {
+<span class="nc" id="L74">        this.alarmName = alarmName;</span>
+<span class="nc" id="L75">        return this;</span>
+    }
+
+    /**
+     * Assert that alarm state for previously set alarm matches what is expected.
+     *
+     * @param expectedState String expected alarm state
+     */
+    @Then(&quot;^assertCW alarm = \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertCloudWatchAlarmState(String expectedState) {
+<span class="nc" id="L85">        Assert.assertEquals(cloudWatchRaider.getAlarmState(alarmName), expectedState);</span>
+<span class="nc" id="L86">    }</span>
+
+    /**
+     * Assert that alarm state for provided alarm matches what is expected.
+     *
+     * @param alarm         String alarm name
+     * @param expectedState String expected alarm state
+     */
+    @Then(&quot;^assertCW alarm \&quot;([^\&quot;]*)\&quot; = \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertCloudWatchAlarmState(String alarm, String expectedState) {
+<span class="nc" id="L96">        Assert.assertEquals(cloudWatchRaider.getAlarmState(alarm), expectedState);</span>
+<span class="nc" id="L97">    }</span>
+
+    /**
+     * Returns true if the previously set alarm is active.
+     *
+     * @return true if alarm is active; false otherwise
+     */
+    @Then(&quot;^assertCW alarm is on$&quot;)
+    public boolean isAlarmOn() {
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (alarmName != null) {</span>
+<span class="nc" id="L107">            return cloudWatchRaider.isStateInAlarm(alarmName);</span>
+        }
+
+<span class="nc" id="L110">        throw new RuntimeException(&quot;Alarm Name is not set&quot;);</span>
+    }
+
+    /**
+     * Returns true if the previously set alarm is inactive.
+     *
+     * @return true if alarm is inactive; false otherwise
+     */
+    @Then(&quot;^assertCW alarm is off$&quot;)
+    public boolean isAlarmOff() {
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (alarmName != null) {</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            return !cloudWatchRaider.isStateInAlarm(alarmName);</span>
+        }
+
+<span class="nc" id="L124">        throw new RuntimeException(&quot;Alarm Name is not set&quot;);</span>
+    }
+
+
+    /**
+     * Makes sure that there are no alarms currently triggered (&quot;ALARM&quot; state.)
+     */
+    @Given(&quot;^check CloudWatch alarms state$&quot;)
+    public CloudWatchStepDefinitions checkAlarmState() {
+<span class="nc" id="L133">        Integer count = cloudWatchRaider.countAlarmsInState(&quot;ALARM&quot;);</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        if (count != 0) {</span>
+<span class="nc" id="L135">            throw new RuntimeException(&quot;Some alarm is triggered and set in ALARM state.&quot;);</span>
+        }
+<span class="nc" id="L137">        return this;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

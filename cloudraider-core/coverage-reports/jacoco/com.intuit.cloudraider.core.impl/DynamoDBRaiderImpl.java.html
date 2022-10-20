@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DynamoDBRaiderImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.core.impl</a> &gt; <span class="el_source">DynamoDBRaiderImpl.java</span></div><h1>DynamoDBRaiderImpl.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.core.impl;
+
+import com.amazonaws.services.dynamodbv2.model.DescribeTableRequest;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.UpdateTableRequest;
+import com.intuit.cloudraider.commons.DynamoDBDelegator;
+import com.intuit.cloudraider.core.interfaces.DynamoDBRaider;
+import com.intuit.cloudraider.core.interfaces.SystemRaider;
+import com.intuit.cloudraider.model.Actions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import java.net.URL;
+
+/**
+ * This class executes the FMEA for DynamoDB.
+ * It updates the /etc/hosts for popular dynamoDB addresses to simulate failures.
+ */
+@Component(value=&quot;dynamoRaiderBean&quot;)
+public class DynamoDBRaiderImpl implements DynamoDBRaider {
+
+    @Autowired
+    @Qualifier(&quot;systemRaiderBean&quot;)
+    private SystemRaider systemRaider;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L56">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private DynamoDBDelegator dynamoDBDelegator;
+
+    /**
+     * Instantiates a new Dynamo db raider.
+     */
+<span class="nc" id="L64">    public DynamoDBRaiderImpl() {</span>
+<span class="nc" id="L65">    }</span>
+
+
+    /**
+     * Block the DynamoDB with the given ip address.
+     *
+     * @param ip private ip address
+     * @return script execution status
+     */
+    @Override
+    public String blockDynamoDB(String ip) {
+<span class="nc" id="L76">        return executeScriptOnClasspath(ip, Actions.BLOCKDYNAMO.getActionName());</span>
+    }
+
+    /**
+     * Unblock the DynamoDB with the given ip address.
+     *
+     * @param ip private ip address
+     * @return script execution status
+     */
+    @Override
+    public String unblockDynamoDB(String ip) {
+<span class="nc" id="L87">        return executeScriptOnClasspath(ip, Actions.UNBLOCKDYNAMO.getActionName());</span>
+    }
+
+    /**
+     * Executes the script given.
+     *
+     * @param ip         the ip to execute the given script on
+     * @param scriptName the name of the script. expects this to be a shell script. will add the extension within this method.
+     * @return script execution status
+     */
+    private String executeScriptOnClasspath(String ip, String scriptName) {
+<span class="nc" id="L98">        URL url = ClassLoader.getSystemResource(scriptName + &quot;.sh&quot;);</span>
+<span class="nc" id="L99">        return systemRaider.executeScript(ip, url.getPath());</span>
+    }
+
+    @Override
+    public long getDynamoDBReadIOPS(String tableName) {
+
+<span class="nc" id="L105">       return dynamoDBDelegator.getAmazonDynamoDB().describeTable(new DescribeTableRequest().withTableName(tableName))</span>
+<span class="nc" id="L106">                .getTable().getProvisionedThroughput().getReadCapacityUnits();</span>
+    }
+
+    @Override
+    public void setDyanmoDBReadIOPS(String tableName,long readIops) {
+
+<span class="nc" id="L112">        dynamoDBDelegator.getAmazonDynamoDB().updateTable(new UpdateTableRequest().withTableName(tableName).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(readIops).withWriteCapacityUnits(getDynamoDBWriteIOPS(tableName))));</span>
+<span class="nc" id="L113">    }</span>
+
+    @Override
+    public long getDynamoDBWriteIOPS(String tableName) {
+<span class="nc" id="L117">        return dynamoDBDelegator.getAmazonDynamoDB().describeTable(new DescribeTableRequest().withTableName(tableName))</span>
+<span class="nc" id="L118">                .getTable().getProvisionedThroughput().getWriteCapacityUnits();</span>
+    }
+
+    @Override
+    public void setDyanmoDBWriteIOPS(String tableName, long writeIops) {
+<span class="nc" id="L123">        dynamoDBDelegator.getAmazonDynamoDB().updateTable(new UpdateTableRequest().withTableName(tableName).withProvisionedThroughput(new ProvisionedThroughput().withWriteCapacityUnits(writeIops).withReadCapacityUnits(getDynamoDBReadIOPS(tableName))));</span>
+<span class="nc" id="L124">    }</span>
+
+    @Override
+    public void setDyanmoDBReadAndWriteIOPS(String tableName, long readIops, long writeIops) {
+
+<span class="nc" id="L129">        dynamoDBDelegator.getAmazonDynamoDB().updateTable(new UpdateTableRequest().withTableName(tableName).withProvisionedThroughput(new ProvisionedThroughput().withWriteCapacityUnits(writeIops).withReadCapacityUnits(readIops)));</span>
+
+<span class="nc" id="L131">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

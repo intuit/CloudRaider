@@ -1,0 +1,966 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EC2RaiderImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.core.impl</a> &gt; <span class="el_source">EC2RaiderImpl.java</span></div><h1>EC2RaiderImpl.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.core.impl;
+
+import com.amazonaws.services.ec2.model.*;
+import com.intuit.cloudraider.commons.EC2Delegator;
+import com.intuit.cloudraider.core.interfaces.EC2Raider;
+import com.intuit.cloudraider.cucumber.util.CucumberHelperFunctions;
+import com.intuit.cloudraider.exceptions.InvalidInputDataException;
+import com.intuit.cloudraider.exceptions.ResourceNotFoundException;
+import com.intuit.cloudraider.model.EC2InstanceTO;
+import com.intuit.cloudraider.model.EC2Status;
+import com.intuit.cloudraider.utils.Ec2Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+
+/**
+ * AWS EC2 functionality.
+ * &lt;p&gt;
+  */
+@Component(value=&quot;ec2raiderBean&quot;)
+public class EC2RaiderImpl implements EC2Raider {
+
+    /**
+     * The constant AVAILABILITY_ZONE_FILTER_KEY.
+     */
+    public static final String AVAILABILITY_ZONE_FILTER_KEY = &quot;availability-zone&quot;;
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L59">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+    
+    @Autowired
+    private EC2Delegator ec2Delegator;
+
+    /**
+     * Instantiates a new Ec 2 raider.
+     */
+<span class="nc" id="L67">    public EC2RaiderImpl() {</span>
+<span class="nc" id="L68">    }</span>
+
+    /**
+     * Get list of instances by availability zone, ignoring instances with any of the &quot;ignore tags&quot;
+     * Note: will ignore tag names containing &quot;bastion&quot; and &quot;admin&quot;.
+     * Instance must have all the tags in compulsory tags to be returned in the list.
+     *
+     * @param availabilityZone availability zone (e.g. &quot;us-west-1&quot;)
+     * @param ignoreTags list of tags to ignore
+     * @param compulsoryTags list of tags that must be included
+     * @return list of terminated instance ids
+     */
+
+    @Override
+    public List&lt;EC2InstanceTO&gt; getEc2InstanceIdsWithCompulsoryTagsForAvailabilityZone(String availabilityZone, List&lt;Tag&gt; ignoreTags, List&lt;Tag&gt; compulsoryTags) {
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (ignoreTags == null) {</span>
+<span class="nc" id="L84">            ignoreTags = new ArrayList&lt;&gt;();</span>
+        }
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (compulsoryTags == null) {</span>
+<span class="nc" id="L87">            compulsoryTags = new ArrayList&lt;&gt;();</span>
+        }
+
+<span class="nc" id="L90">        List&lt;EC2InstanceTO&gt; instances = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L92" title="All 2 branches missed.">        for (Reservation reservation : getReservationsByAvailabilityZone(availabilityZone)) {</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">            for (Instance instance : reservation.getInstances()) {</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">                if (Ec2Utils.isAwsInfrastructure(instance)) {</span>
+<span class="nc" id="L95">                    continue;</span>
+                }
+<span class="nc bnc" id="L97" title="All 2 branches missed.">                if(instance.getState().getName().equalsIgnoreCase(&quot;terminated&quot;)) {</span>
+<span class="nc" id="L98">                    continue;</span>
+                }
+
+                // OR condition with ignoreTags and AND condition with compulsoryTags
+                // 1. If any one of the ignore tags is present then instance will be ignored
+                // 2. For instance to be considered all compulsory tags should be present.
+
+<span class="nc" id="L105">                boolean flag = true;</span>
+
+<span class="nc bnc" id="L107" title="All 2 branches missed.">                for (Tag instanceTag : instance.getTags()) {</span>
+<span class="nc" id="L108">                    boolean instanceContainsTag = false;</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                    for (Tag ignoreTag : ignoreTags) {</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                        if (ignoreTag.equals(instanceTag)) {</span>
+<span class="nc" id="L111">                            instanceContainsTag = true;</span>
+<span class="nc" id="L112">                            break;</span>
+                        }
+<span class="nc" id="L114">                    }</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">                    if(instanceContainsTag) {</span>
+<span class="nc" id="L116">                        flag = false;</span>
+<span class="nc" id="L117">                        break;</span>
+                    }
+<span class="nc" id="L119">                }</span>
+
+<span class="nc bnc" id="L121" title="All 2 branches missed.">                if (!flag) {</span>
+<span class="nc" id="L122">                    continue;</span>
+                }
+
+<span class="nc" id="L125">                flag = CucumberHelperFunctions.containsAllCompulsoryTags(compulsoryTags, instance.getTags());</span>
+
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                if (flag) {</span>
+<span class="nc" id="L128">                    EC2InstanceTO ec2InstanceTO = createEc2Instance(instance);</span>
+<span class="nc" id="L129">                    instances.add(ec2InstanceTO);</span>
+                }
+<span class="nc" id="L131">            }</span>
+<span class="nc" id="L132">        }</span>
+<span class="nc" id="L133">        return instances;</span>
+    }
+
+    /**
+     * Get list of instances by availability zone, ignoring instances with any of the &quot;ignore tags&quot;
+     * Note: will ignore tag names containing &quot;bastion&quot; and &quot;admin&quot;.
+     *
+     * @param availabilityZone availability zone
+     * @param instanceIdsToIgnore instances to ignore
+     * @return list of EC2InstanceTO (ec2 instances) in given availability zone
+     */
+    @Override
+    public List&lt;EC2InstanceTO&gt; getEc2InstancesForAvailabilityZone(String availabilityZone, List&lt;String&gt; instanceIdsToIgnore) {
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        if (instanceIdsToIgnore == null) {</span>
+<span class="nc" id="L147">            instanceIdsToIgnore = new ArrayList&lt;&gt;();</span>
+        }
+<span class="nc" id="L149">        List&lt;String&gt; instanceIds = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        for (Reservation reservation : getReservationsByAvailabilityZone(availabilityZone)) {</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">            for (Instance instance : reservation.getInstances()) {</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">                if (Ec2Utils.isAwsInfrastructure(instance)</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">                        || instanceIdsToIgnore.contains(instance.getInstanceId())</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                        || instance.getState().getName().equalsIgnoreCase(&quot;terminated&quot;)) {</span>
+<span class="nc" id="L156">                    continue;</span>
+                }
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                if(instance.getState().getName().equalsIgnoreCase(&quot;terminated&quot;)) {</span>
+<span class="nc" id="L159">                	continue;</span>
+                }
+<span class="nc" id="L161">                instanceIds.add(instance.getInstanceId());</span>
+<span class="nc" id="L162">            }</span>
+<span class="nc" id="L163">        }</span>
+<span class="nc" id="L164">        return getEC2InstancesByIds(instanceIds);</span>
+    }
+
+    /**
+     * Get list of instance private ip addresses by availability zone, ignoring instances with any of the &quot;ignore tags&quot;
+     * Note: will ignore tag names containing &quot;bastion&quot; and &quot;admin&quot;.
+     *
+     * @param availabilityZone availability zone
+     * @param instanceIdsToIgnore instances to ignore
+     * @return list of ec2 private ip addresses
+     */
+    @Override
+    public List&lt;String&gt; getEc2InstanceIPsForAvailabilityZone(String availabilityZone, List&lt;String&gt; instanceIdsToIgnore) {
+
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (instanceIdsToIgnore == null) {</span>
+<span class="nc" id="L179">            instanceIdsToIgnore = new ArrayList&lt;&gt;();</span>
+        }
+
+<span class="nc" id="L182">        List&lt;String&gt; instanceIps = new ArrayList&lt;String&gt;();</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        for (Reservation reservation : getReservationsByAvailabilityZone(availabilityZone)) {</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">            for (Instance instance : reservation.getInstances()) {</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">                if (Ec2Utils.isAwsInfrastructure(instance)</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">                        || instanceIdsToIgnore.contains(instance.getInstanceId())) {</span>
+<span class="nc" id="L187">                    continue;</span>
+                }
+<span class="nc" id="L189">                instanceIps.add(instance.getPrivateIpAddress());</span>
+<span class="nc" id="L190">            }</span>
+<span class="nc" id="L191">        }</span>
+<span class="nc" id="L192">        return instanceIps;</span>
+    }
+
+    /**
+     * Get all private ip addresses of instances with the matching name and part of the given availability zone.
+     *
+     * @param name name
+     * @param availabilityZone availability zone
+     * @return list of private ip addresses
+     */
+    @Override
+    public List&lt;String&gt; getInstancesIPsForAZWithName(String name, String availabilityZone) {
+<span class="nc" id="L204">        List&lt;EC2InstanceTO&gt; instances = getInstancesByName(name);</span>
+<span class="nc" id="L205">        return instances.stream()</span>
+<span class="nc" id="L206">                .filter(x -&gt; x.getAvailabilityZone().equalsIgnoreCase(availabilityZone))</span>
+<span class="nc" id="L207">                .map(EC2InstanceTO::getPrivateIpAddress)</span>
+<span class="nc" id="L208">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Get the reservations in the availability zone.
+     *
+     * @param availabilityZone availability zone
+     * @return list of EC2 Reservations
+     */
+    private List&lt;Reservation&gt; getReservationsByAvailabilityZone(String availabilityZone) {
+<span class="nc" id="L218">        Filter availabilityZoneFilter = new Filter(AVAILABILITY_ZONE_FILTER_KEY, Arrays.asList(availabilityZone));</span>
+<span class="nc" id="L219">        DescribeInstancesResult result = ec2Delegator.getEc2().describeInstances(</span>
+<span class="nc" id="L220">                new DescribeInstancesRequest().withFilters(availabilityZoneFilter)</span>
+        );
+        
+<span class="nc" id="L223">        return result.getReservations();</span>
+    }
+
+    /**
+     * Get the instance ids of instances which match at least one of the tags
+     *
+     * @param tags tags
+     * @return list of instance ids
+     */
+    @Override
+    public List&lt;String&gt; getInstanceIdsForTags(List&lt;Tag&gt; tags) {
+<span class="nc" id="L234">        List&lt;EC2InstanceTO&gt; instances = getInstancesFromAnyTags(tags);</span>
+<span class="nc" id="L235">        return instances.stream().map(EC2InstanceTO::getInstanceId).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Get all instances with the given name.
+     *
+     * @param name instance name
+     * @return list of EC2InstanceTO (ec2 instances)
+     */
+    @Override
+    public List&lt;EC2InstanceTO&gt; getInstancesByName(String name) {
+<span class="nc" id="L246">        Tag t = new Tag().withKey(&quot;Name&quot;).withValue(name);</span>
+<span class="nc" id="L247">        List&lt;Tag&gt; tags = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L248">        tags.add(t);</span>
+
+<span class="nc" id="L250">        return getInstancesFromAnyTags(tags);</span>
+    }
+
+    /**
+     * Terminate the given instances.
+     *
+     * @param instanceIds instance ids
+     */
+    @Override
+    public void terminateEc2InstancesById(String... instanceIds) {
+
+<span class="nc bnc" id="L261" title="All 4 branches missed.">        if (instanceIds.length &lt;= 0 || instanceIds == null) {</span>
+<span class="nc" id="L262">            throw new InvalidInputDataException(&quot;Invalid list of instanceIds&quot;);</span>
+        }
+<span class="nc" id="L264">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(instanceIds);</span>
+<span class="nc" id="L265">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+<span class="nc" id="L266">    }</span>
+
+    /**
+     * Terminate the instance with the given id.
+     *
+     * @param instanceId instance id
+     */
+    @Override
+    public void terminateEc2InstancesById(String instanceId) {
+
+<span class="nc bnc" id="L276" title="All 4 branches missed.">        if (instanceId == null || instanceId.isEmpty()) {</span>
+<span class="nc" id="L277">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+        }
+<span class="nc" id="L279">       logger.info(&quot;EC2Raider: Terminating instance with id: &quot; + instanceId);</span>
+<span class="nc" id="L280">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(instanceId);</span>
+<span class="nc" id="L281">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+<span class="nc" id="L282">    }</span>
+
+    /**
+     * Terminate the given instances.
+     *
+     * @param instanceIds list of instance ids
+     */
+    @Override
+    public void terminateEc2InstancesById(List&lt;String&gt; instanceIds) {
+<span class="nc bnc" id="L291" title="All 2 branches missed.">        if (instanceIds.isEmpty()) {</span>
+<span class="nc" id="L292">            throw new InvalidInputDataException(&quot;Invalid list of instanceIds&quot;);</span>
+        }
+
+<span class="nc" id="L295">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(instanceIds);</span>
+<span class="nc" id="L296">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+<span class="nc" id="L297">    }</span>
+
+    /**
+     * Terminates the EC2 instances with the given name.
+     *
+     * @param names names
+     */
+    @Override
+    public void terminateEC2InstancesByName(String... names) {
+<span class="nc" id="L306">        List&lt;String&gt; ids = terminateEC2InstancesByNameHelper(names);</span>
+
+<span class="nc bnc" id="L308" title="All 2 branches missed.">        if (ids.isEmpty()) {</span>
+<span class="nc" id="L309">            throw new ResourceNotFoundException(&quot;No Instances are available&quot;);</span>
+        }
+
+<span class="nc" id="L312">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(ids);</span>
+<span class="nc" id="L313">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+<span class="nc" id="L314">    }</span>
+
+    /**
+     * Terminates the set number of EC2 instances with the given name.
+     *
+     * @param name name
+     * @param numberOfInstances number of instances to terminate
+     */
+    @Override
+    public void terminateEC2InstancesByName(String name, int numberOfInstances) {
+<span class="nc" id="L324">        List&lt;String&gt; ids = terminateEC2InstancesByNameHelper(name);</span>
+
+<span class="nc bnc" id="L326" title="All 2 branches missed.">        if (ids.isEmpty()) {</span>
+<span class="nc" id="L327">            throw new ResourceNotFoundException(&quot;No Instances are available&quot;);</span>
+<span class="nc bnc" id="L328" title="All 2 branches missed.">        } else if (numberOfInstances &gt; ids.size()) {</span>
+<span class="nc" id="L329">            logger.debug(&quot;EC2Raider: Number of Instance provided for termination is greater than running instances, changing number from: &quot;</span>
+<span class="nc" id="L330">                    + numberOfInstances + &quot; to &quot; + ids.size());</span>
+<span class="nc" id="L331">            numberOfInstances = ids.size();</span>
+        }
+
+<span class="nc" id="L334">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(ids.subList(0, numberOfInstances));</span>
+<span class="nc" id="L335">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+<span class="nc" id="L336">    }</span>
+
+    /**
+     * Helper function for terminateEC2InstancesByName
+     * @param names names to terminate
+     * @return list of matching instance ids
+     */
+    private List&lt;String&gt; terminateEC2InstancesByNameHelper(String... names) {
+<span class="nc" id="L344">        List&lt;String&gt; namesList = Arrays.asList(names);</span>
+<span class="nc" id="L345">        List&lt;String&gt; ids = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L346">        List&lt;Tag&gt; tags = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L348" title="All 2 branches missed.">        for (String name : namesList) {</span>
+<span class="nc" id="L349">            Tag t = new Tag().withKey(&quot;Name&quot;).withValue(name);</span>
+<span class="nc" id="L350">            tags.add(t);</span>
+<span class="nc" id="L351">            ids.addAll(getInstanceIdsForTags(tags));</span>
+<span class="nc" id="L352">            tags.clear();</span>
+<span class="nc" id="L353">        }</span>
+<span class="nc" id="L354">        ids = ids.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L355">        return ids;</span>
+    }
+
+    /**
+     * Gets all the instances that match at least one of the provided tags.
+     *
+     * @param tags list of tags
+     * @return list of EC2 instances
+     */
+    @Override
+    public List&lt;EC2InstanceTO&gt; getInstancesFromAnyTags(List&lt;Tag&gt; tags) {
+<span class="nc" id="L366">        List&lt;EC2InstanceTO&gt; instances = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L367" title="All 2 branches missed.">        for (Tag tag : tags) {</span>
+<span class="nc" id="L368">            String key = tag.getKey();</span>
+<span class="nc" id="L369">            String value = tag.getValue();</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">            for (Reservation res : ec2Delegator.getEc2().describeInstances().getReservations()) {</span>
+<span class="nc bnc" id="L371" title="All 2 branches missed.">                for (Instance i : res.getInstances()) {</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">                    if (i.getState().getName().equalsIgnoreCase(&quot;running&quot;)) {</span>
+<span class="nc bnc" id="L373" title="All 2 branches missed.">                        for (Tag instanceTag : i.getTags()) {</span>
+<span class="nc bnc" id="L374" title="All 4 branches missed.">                            if (key.equalsIgnoreCase(instanceTag.getKey()) &amp;&amp; value.equalsIgnoreCase(instanceTag.getValue())) {</span>
+<span class="nc" id="L375">                                instances.add(createEc2Instance(i));</span>
+<span class="nc" id="L376">                                break;</span>
+                            }
+<span class="nc" id="L378">                        }</span>
+                    }
+<span class="nc" id="L380">                }</span>
+<span class="nc" id="L381">            }</span>
+<span class="nc" id="L382">        }</span>
+<span class="nc" id="L383">        return instances;</span>
+    }
+
+    /**
+     * Get the EC2 instance with the given id.
+     *
+     * @param instanceId instance id
+     * @return EC2InstanceTO (ec2 instances)
+     */
+    @Override
+    public EC2InstanceTO getEC2InstanceById(String instanceId) {
+
+<span class="nc bnc" id="L395" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L396">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L399">        EC2InstanceTO ec2InstanceTO = null;</span>
+<span class="nc bnc" id="L400" title="All 2 branches missed.">        for (Reservation res : ec2Delegator.getEc2().describeInstances().getReservations()) {</span>
+<span class="nc bnc" id="L401" title="All 2 branches missed.">            for (Instance i : res.getInstances()) {</span>
+<span class="nc bnc" id="L402" title="All 4 branches missed.">                if (i.getInstanceId().equalsIgnoreCase(instanceId) &amp;&amp; i.getState().getName().equalsIgnoreCase(&quot;running&quot;)) {</span>
+<span class="nc" id="L403">                    ec2InstanceTO = this.createEc2Instance(i);</span>
+<span class="nc" id="L404">                    break;</span>
+                }
+<span class="nc" id="L406">            }</span>
+<span class="nc" id="L407">        }</span>
+
+<span class="nc bnc" id="L409" title="All 2 branches missed.">        if (ec2InstanceTO == null) {</span>
+<span class="nc" id="L410">            throw new ResourceNotFoundException(&quot;Unable to find EC2 Instances with given instance id: &quot; + instanceId);</span>
+        }
+<span class="nc" id="L412">        return ec2InstanceTO;</span>
+    }
+
+    /**
+     * Get the instances with the given ids.
+     *
+     * @param instanceIds list of instance ids
+     * @return list of EC2InstanceTO (ec2 instances)
+     */
+    @Override
+    public List&lt;EC2InstanceTO&gt; getEC2InstancesByIds(List&lt;String&gt; instanceIds) {
+<span class="nc" id="L423">        List&lt;EC2InstanceTO&gt; ec2InstanceTOList = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L425">        instanceIds.stream().forEach(</span>
+                instanceId -&gt; {
+<span class="nc" id="L427">                    ec2InstanceTOList.add(getEC2InstanceById(instanceId));</span>
+<span class="nc" id="L428">                }</span>
+        );
+
+<span class="nc" id="L431">        return ec2InstanceTOList;</span>
+    }
+
+    /**
+     * Get all available instances that do not contain any of the filteredWords in their names.
+     *
+     * @param filteredWords words to filter out from the name
+     * @return list of EC2InstanceTO (ec2 instances)
+     */
+    @Override
+    public List&lt;EC2InstanceTO&gt; getFilteredActiveInstances(List&lt;String&gt; filteredWords) {
+<span class="nc" id="L442">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+<span class="nc" id="L443">        ArrayList&lt;String&gt; vals = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L444">        vals.add(&quot;running&quot;);</span>
+
+<span class="nc" id="L446">        Filter filter = new Filter(&quot;instance-state-name&quot;, vals);</span>
+
+<span class="nc" id="L448">        List&lt;Reservation&gt; res = ec2Delegator.getEc2().describeInstances(request.withFilters(filter)).getReservations();</span>
+<span class="nc" id="L449">        List&lt;String&gt; ids = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L450" title="All 2 branches missed.">        for (Reservation reservation : res) {</span>
+<span class="nc" id="L451">            List&lt;Instance&gt; instances = reservation.getInstances();</span>
+<span class="nc bnc" id="L452" title="All 2 branches missed.">            for (Instance in : instances) {</span>
+<span class="nc" id="L453">                List&lt;Tag&gt; tags = in.getTags();</span>
+<span class="nc" id="L454">                Optional&lt;Tag&gt; name = tags.stream().filter(y -&gt; y.getKey().equalsIgnoreCase(&quot;name&quot;)).findFirst();</span>
+<span class="nc" id="L455">                boolean flag = true;</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">                for (String word : filteredWords) {</span>
+<span class="nc bnc" id="L457" title="All 4 branches missed.">                    if (name.isPresent() &amp;&amp; name.get().getValue().toLowerCase().contains(word.toLowerCase())) {</span>
+<span class="nc" id="L458">                        flag = false;</span>
+<span class="nc" id="L459">                        break;</span>
+                    }
+<span class="nc" id="L461">                }</span>
+<span class="nc bnc" id="L462" title="All 2 branches missed.">                if (flag) {</span>
+<span class="nc" id="L463">                    ids.add(in.getInstanceId());</span>
+                }
+<span class="nc" id="L465">            }</span>
+<span class="nc" id="L466">        }</span>
+
+<span class="nc" id="L468">        return getEC2InstancesByIds(ids.stream().distinct().collect(Collectors.toList()));</span>
+    }
+
+    /**
+     * Given an EC2 instance object from AWS, create internally used EC2InstanceTO object to represent same info.
+     *
+     * @param i instance
+     * @return EC2InstanceTO (ec2 instances)
+     */
+    private EC2InstanceTO createEc2Instance(Instance i) {
+<span class="nc" id="L478">        EC2InstanceTO ec2InstanceTO = new EC2InstanceTO();</span>
+<span class="nc" id="L479">        ec2InstanceTO.setStateName(i.getState().getName());</span>
+<span class="nc" id="L480">        ec2InstanceTO.setPrivateIpAddress(i.getPrivateIpAddress());</span>
+<span class="nc" id="L481">        ec2InstanceTO.setInstanceId(i.getInstanceId());</span>
+<span class="nc" id="L482">        ec2InstanceTO.setTags(i.getTags());</span>
+<span class="nc" id="L483">        ec2InstanceTO.setAvailabilityZone(i.getPlacement().getAvailabilityZone());</span>
+<span class="nc" id="L484">        ec2InstanceTO.setSecurityGroupIds(i.getSecurityGroups().parallelStream().map(GroupIdentifier::getGroupId).collect(Collectors.toList()));</span>
+<span class="nc" id="L485">        ec2InstanceTO.setSubnetId(i.getSubnetId());</span>
+<span class="nc" id="L486">        ec2InstanceTO.setVpcId(i.getVpcId());</span>
+        //ec2InstanceTO.setLoadBalancerName(getLoadBalancerName(i.getInstanceId()));
+<span class="nc" id="L488">        return ec2InstanceTO;</span>
+    }
+
+    /**
+     * Stop the instance with the matching id.
+     *
+     * @param instanceId instance id
+     */
+    @Override
+    public void stopEc2Instances(String instanceId) {
+
+<span class="nc bnc" id="L499" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L500">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L503">        StopInstancesRequest request = new StopInstancesRequest()</span>
+<span class="nc" id="L504">                .withInstanceIds(instanceId);</span>
+
+<span class="nc" id="L506">        StopInstancesResult response = ec2Delegator.getEc2().stopInstances(request);</span>
+<span class="nc" id="L507">    }</span>
+
+    /**
+     * Restart the instance with the matching id.
+     *
+     * @param instanceId instance id
+     */
+    @Override
+    public void restartEc2Instances(String instanceId) {
+
+<span class="nc bnc" id="L517" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L518">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L521">        RebootInstancesRequest request = new RebootInstancesRequest()</span>
+<span class="nc" id="L522">                .withInstanceIds(instanceId);</span>
+
+<span class="nc" id="L524">        RebootInstancesResult response = ec2Delegator.getEc2().rebootInstances(request);</span>
+<span class="nc" id="L525">    }</span>
+
+    /**
+     * Get the status of the instance with the matching id.
+     *
+     * @param instanceId instance id
+     * @return instance status
+     */
+    @Override
+    public String getInstanceStatusById(String instanceId) {
+<span class="nc" id="L535">        String result = null;</span>
+
+<span class="nc bnc" id="L537" title="All 2 branches missed.">        for (Reservation res : ec2Delegator.getEc2().describeInstances().getReservations()) {</span>
+<span class="nc bnc" id="L538" title="All 2 branches missed.">            for (Instance i : res.getInstances()) {</span>
+<span class="nc bnc" id="L539" title="All 2 branches missed.">                if (i.getInstanceId().equalsIgnoreCase(instanceId)) {</span>
+
+<span class="nc" id="L541">                    result = i.getState().getName();</span>
+                }
+<span class="nc" id="L543">            }</span>
+<span class="nc" id="L544">        }</span>
+
+<span class="nc bnc" id="L546" title="All 2 branches missed.">        if (result == null) {</span>
+<span class="nc" id="L547">            throw new ResourceNotFoundException(&quot;Unable to find EC2 instances for id: &quot; + instanceId);</span>
+        }
+
+<span class="nc" id="L550">        return result;</span>
+    }
+
+    /**
+     * Detach the given security group from the instance.
+     *
+     * @param instanceId instance id
+     * @param securityGroup security group id
+     */
+    @Override
+    public void detachSecurityGroup(String instanceId, String securityGroup) {
+
+<span class="nc bnc" id="L562" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L563">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+<span class="nc bnc" id="L564" title="All 4 branches missed.">        } else if (securityGroup.isEmpty() || securityGroup == null) {</span>
+<span class="nc" id="L565">            throw new InvalidInputDataException(&quot;Empty/Null securityGroup provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L568">        List&lt;String&gt; securityGroups = this.getSecurityGroups(instanceId);</span>
+
+<span class="nc bnc" id="L570" title="All 4 branches missed.">        if (securityGroups != null &amp;&amp; securityGroups.contains(securityGroup)) {</span>
+<span class="nc" id="L571">            securityGroups.remove(securityGroup);</span>
+<span class="nc" id="L572">            ec2Delegator.getEc2().modifyInstanceAttribute(new ModifyInstanceAttributeRequest().withInstanceId(instanceId).withGroups(securityGroups));</span>
+
+        } else {
+<span class="nc" id="L575">            throw new InvalidInputDataException(&quot;Invalid SecurityGroup: &quot; + securityGroup + &quot; provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L578">    }</span>
+
+    /**
+     * Attach the given security group to the instance.
+     *
+     * @param instanceId instance id
+     * @param securityGroup security group id
+     */
+    @Override
+    public void attachSecurityGroup(String instanceId, String securityGroup) {
+
+<span class="nc bnc" id="L589" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L590">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+<span class="nc bnc" id="L591" title="All 4 branches missed.">        } else if (securityGroup.isEmpty() || securityGroup == null) {</span>
+<span class="nc" id="L592">            throw new InvalidInputDataException(&quot;Empty/Null securityGroup provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L595">        List&lt;String&gt; securityGroups = this.getSecurityGroups(instanceId);</span>
+
+<span class="nc bnc" id="L597" title="All 4 branches missed.">        if (securityGroups != null &amp;&amp; !securityGroups.contains(securityGroup)) {</span>
+<span class="nc" id="L598">            securityGroups.add(securityGroup);</span>
+<span class="nc" id="L599">            ec2Delegator.getEc2().modifyInstanceAttribute(new ModifyInstanceAttributeRequest().withInstanceId(instanceId).withGroups(securityGroups));</span>
+        }
+
+
+<span class="nc" id="L603">    }</span>
+
+    /**
+     * Get the security groups attached to the given instance.
+     *
+     * @param instanceId instance id
+     * @return list of security group ids
+     */
+    @Override
+    public List&lt;String&gt; getSecurityGroups(String instanceId) {
+<span class="nc bnc" id="L613" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L614">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L617">        List&lt;String&gt; secGroupIds = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L618">        List&lt;GroupIdentifier&gt; groups = ec2Delegator.getEc2().describeInstanceAttribute(new DescribeInstanceAttributeRequest().withAttribute(&quot;groupSet&quot;).withInstanceId(instanceId)).getInstanceAttribute().getGroups();</span>
+<span class="nc" id="L619">        groups.forEach(group -&gt; secGroupIds.add(group.getGroupId()));</span>
+<span class="nc" id="L620">        return secGroupIds;</span>
+    }
+
+    /**
+     * Detach the given security groups from the instance.
+     *
+     * @param instanceId instance id
+     * @param securityGroups security group ids
+     */
+    @Override
+    public void detachSecurityGroups(String instanceId, String... securityGroups) {
+
+<span class="nc bnc" id="L632" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L633">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+<span class="nc bnc" id="L634" title="All 4 branches missed.">        } else if (securityGroups.length &lt;= 0 || securityGroups == null) {</span>
+<span class="nc" id="L635">            throw new InvalidInputDataException(&quot;Empty/Null securityGroups provided in request&quot;);</span>
+        }
+
+
+<span class="nc" id="L639">        List&lt;String&gt; existingSecurityGroups = this.getSecurityGroups(instanceId);</span>
+
+<span class="nc bnc" id="L641" title="All 4 branches missed.">        if (existingSecurityGroups != null &amp;&amp; existingSecurityGroups.containsAll(Arrays.asList(securityGroups))) {</span>
+<span class="nc" id="L642">            existingSecurityGroups.removeAll(Arrays.asList(securityGroups));</span>
+<span class="nc" id="L643">            ec2Delegator.getEc2().modifyInstanceAttribute(new ModifyInstanceAttributeRequest().withInstanceId(instanceId).withGroups(existingSecurityGroups));</span>
+        } else {
+<span class="nc" id="L645">            throw new InvalidInputDataException(&quot;Invalid SecurityGroups: &quot; + securityGroups + &quot; provided in request&quot;);</span>
+        }
+<span class="nc" id="L647">    }</span>
+
+    /**
+     * Attach the given security groups to the instance.
+     *
+     * @param instanceId instance id
+     * @param securityGroups security group ids
+     */
+    @Override
+    public void attachSecurityGroups(String instanceId, String... securityGroups) {
+
+<span class="nc bnc" id="L658" title="All 4 branches missed.">        if (instanceId.isEmpty() || instanceId == null) {</span>
+<span class="nc" id="L659">            throw new InvalidInputDataException(&quot;Empty/Null instanceId provided in request&quot;);</span>
+<span class="nc bnc" id="L660" title="All 4 branches missed.">        } else if (securityGroups.length &lt;= 0 || securityGroups == null) {</span>
+<span class="nc" id="L661">            throw new InvalidInputDataException(&quot;Empty/Null securityGroups provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L664">        List&lt;String&gt; existingSecurityGroups = this.getSecurityGroups(instanceId);</span>
+
+<span class="nc bnc" id="L666" title="All 4 branches missed.">        if (existingSecurityGroups != null &amp;&amp; !existingSecurityGroups.containsAll(Arrays.asList(securityGroups))) {</span>
+<span class="nc" id="L667">            existingSecurityGroups.addAll(Arrays.asList(securityGroups));</span>
+<span class="nc" id="L668">            ec2Delegator.getEc2().modifyInstanceAttribute(new ModifyInstanceAttributeRequest().withInstanceId(instanceId).withGroups(existingSecurityGroups));</span>
+        }
+
+<span class="nc" id="L671">    }</span>
+
+    /**
+     * Get AWS instance with the matching id.
+     *
+     * @param instanceId instance id
+     * @return AWS Instance
+     */
+    @Override
+    public Instance getInstanceDetailsById(String instanceId) {
+<span class="nc" id="L681">        Instance result = null;</span>
+<span class="nc" id="L682">        Iterator var3 = this.ec2Delegator.getEc2().describeInstances().getReservations().iterator();</span>
+
+<span class="nc bnc" id="L684" title="All 2 branches missed.">        while(var3.hasNext()) {</span>
+<span class="nc" id="L685">            Reservation res = (Reservation)var3.next();</span>
+<span class="nc" id="L686">            Iterator var5 = res.getInstances().iterator();</span>
+
+<span class="nc bnc" id="L688" title="All 2 branches missed.">            while(var5.hasNext()) {</span>
+<span class="nc" id="L689">                Instance i = (Instance)var5.next();</span>
+<span class="nc bnc" id="L690" title="All 2 branches missed.">                if (i.getInstanceId().equalsIgnoreCase(instanceId)) {</span>
+<span class="nc" id="L691">                    result = i;</span>
+                }
+<span class="nc" id="L693">            }</span>
+<span class="nc" id="L694">        }</span>
+
+<span class="nc" id="L696">        return result;</span>
+    }
+
+    /**
+     * Gets the EC2Status of the specified instance.
+     *
+     * @param name name of instance
+     * @return EC2Status
+     */
+    @Override
+    public EC2Status getInstanceStatus(String name) {
+
+<span class="nc" id="L708">        EC2Status ec2Status = null;</span>
+<span class="nc" id="L709">        Map instanceState = new HashMap();</span>
+
+<span class="nc" id="L711">        List tagNames = new ArrayList();</span>
+<span class="nc" id="L712">        tagNames.add(name);</span>
+
+<span class="nc" id="L714">        Filter filter1 = new Filter(&quot;tag:Name&quot;, tagNames);</span>
+
+<span class="nc" id="L716">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+<span class="nc" id="L717">        DescribeInstancesResult result = ec2Delegator.getEc2().describeInstances(request.withFilters(filter1));</span>
+
+<span class="nc" id="L719">        List&lt;Reservation&gt; reservations = result.getReservations();</span>
+<span class="nc bnc" id="L720" title="All 2 branches missed.">        for (Reservation reservation : reservations) {</span>
+<span class="nc" id="L721">            List&lt;Instance&gt; instances = reservation.getInstances();</span>
+
+<span class="nc bnc" id="L723" title="All 2 branches missed.">            for (Instance instance : instances) {</span>
+<span class="nc" id="L724">                instanceState.put(instance.getInstanceId(), instance.getState().getName());</span>
+<span class="nc" id="L725">            }</span>
+<span class="nc" id="L726">        }</span>
+
+<span class="nc bnc" id="L728" title="All 2 branches missed.">        if (instanceState.isEmpty()) {</span>
+<span class="nc" id="L729">            throw new ResourceNotFoundException(&quot;Unable to find EC2 instances for tag: &quot; + name);</span>
+        }
+
+<span class="nc" id="L732">        ec2Status = new EC2Status();</span>
+<span class="nc" id="L733">        ec2Status.setStatus(instanceState);</span>
+<span class="nc" id="L734">        ec2Status.setTagName(name);</span>
+
+<span class="nc" id="L736">        return ec2Status;</span>
+    }
+
+    /**
+     * Get status of the specified instance.
+     *
+     * @param name name of instance
+     * @return Map of instance status (instance id, instance state)
+     */
+    @Override
+    public Map getEC2InstanceState(String name) {
+
+<span class="nc" id="L748">        return getInstanceStatus(name).getStatus();</span>
+    }
+
+    /**
+     * Deprecated due to misleading name. This function only uses the &quot;name&quot; tag value to filter.
+     * Replaced with getInstancesIpsForAZWithName();
+     */
+    @Deprecated
+    public List getInstancesIpsForAZ(String tag, String availabilityZoneName) {
+
+<span class="nc" id="L758">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+
+<span class="nc" id="L760">        ArrayList&lt;String&gt; tags = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L761">        tags.add(tag);</span>
+
+<span class="nc" id="L763">        Filter filter1 = new Filter(&quot;tag:Name&quot;, tags);</span>
+
+<span class="nc" id="L765">        List result =</span>
+<span class="nc" id="L766">                ec2Delegator.getEc2().describeInstances(request.withFilters(filter1))</span>
+<span class="nc" id="L767">                        .getReservations()</span>
+<span class="nc" id="L768">                        .stream()</span>
+<span class="nc" id="L769">                        .map(Reservation::getInstances)</span>
+<span class="nc" id="L770">                        .flatMap(l -&gt; l.stream())</span>
+<span class="nc" id="L771">                        .collect(Collectors.toList())</span>
+<span class="nc" id="L772">                        .stream()</span>
+<span class="nc bnc" id="L773" title="All 4 branches missed.">                        .filter(x -&gt; x.getPlacement().getAvailabilityZone().equalsIgnoreCase(availabilityZoneName) &amp;&amp; x.getState().getName().equalsIgnoreCase(&quot;running&quot;))</span>
+<span class="nc" id="L774">                        .map(Instance::getPrivateIpAddress)</span>
+<span class="nc" id="L775">                        .collect(Collectors.toList());</span>
+
+
+<span class="nc bnc" id="L778" title="All 2 branches missed.">        if (result.isEmpty()) {</span>
+<span class="nc" id="L779">            throw new ResourceNotFoundException(&quot;Unable to find EC2 instances IP address for tag: &quot; + tag + &quot; with AZ: &quot; + availabilityZoneName);</span>
+        }
+<span class="nc" id="L781">        return result;</span>
+
+    }
+
+    /**
+     * Deprecated due to misleading name. This function only uses the &quot;name&quot; tag value to filter.
+     * Replaced with getInstancesByName();
+     */
+    @Deprecated
+    public List&lt;EC2InstanceTO&gt; getInstancesIdsForOneTag(String tagName) {
+
+<span class="nc" id="L792">        List&lt;String&gt; instanceIds = new ArrayList&lt;String&gt;();</span>
+
+
+<span class="nc" id="L795">        List tagNames = new ArrayList();</span>
+
+<span class="nc" id="L797">        tagNames.add(tagName);</span>
+
+
+<span class="nc" id="L800">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+
+<span class="nc" id="L802">        Filter filter1 = new Filter(&quot;tag:Name&quot;, tagNames);</span>
+
+<span class="nc" id="L804">        DescribeInstancesResult result = ec2Delegator.getEc2().describeInstances(request.withFilters(filter1));</span>
+
+<span class="nc" id="L806">        List&lt;Reservation&gt; reservations = result.getReservations();</span>
+
+<span class="nc bnc" id="L808" title="All 2 branches missed.">        for (Reservation reservation : reservations) {</span>
+<span class="nc" id="L809">            List&lt;Instance&gt; instances = reservation.getInstances();</span>
+
+
+<span class="nc bnc" id="L812" title="All 2 branches missed.">            for (Instance instance : instances) {</span>
+<span class="nc bnc" id="L813" title="All 2 branches missed.">                if (instance.getState().getName().equalsIgnoreCase(&quot;running&quot;)) {</span>
+<span class="nc" id="L814">                    instanceIds.add(instance.getInstanceId());</span>
+                }
+<span class="nc" id="L816">            }</span>
+<span class="nc" id="L817">        }</span>
+<span class="nc" id="L818">        return getEC2InstancesByIds(instanceIds);</span>
+    }
+
+    /**
+     * Deprecated due to misleading name. This function only uses the &quot;name&quot; tag value to filter.
+     * Replaced with terminateEC2InstancesByName();
+     */
+    @Deprecated
+    public void terminateEc2InstancesByTags(String... tagName) {
+<span class="nc" id="L827">        List&lt;String&gt; instanceIds = new ArrayList&lt;String&gt;();</span>
+
+<span class="nc" id="L829">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+
+<span class="nc" id="L831">        Filter filter1 = new Filter(&quot;tag:Name&quot;, Arrays.asList(tagName));</span>
+
+<span class="nc" id="L833">        DescribeInstancesResult result = ec2Delegator.getEc2().describeInstances(request.withFilters(filter1));</span>
+<span class="nc" id="L834">        List&lt;Reservation&gt; reservations = result.getReservations();</span>
+
+<span class="nc bnc" id="L836" title="All 2 branches missed.">        for (Reservation reservation : reservations) {</span>
+<span class="nc" id="L837">            List&lt;Instance&gt; instances = reservation.getInstances();</span>
+
+
+<span class="nc bnc" id="L840" title="All 2 branches missed.">            for (Instance instance : instances) {</span>
+<span class="nc" id="L841">                instanceIds.add(instance.getInstanceId());</span>
+<span class="nc" id="L842">            }</span>
+<span class="nc" id="L843">        }</span>
+
+<span class="nc bnc" id="L845" title="All 2 branches missed.">        if (instanceIds.isEmpty()) {</span>
+<span class="nc" id="L846">            throw new ResourceNotFoundException(&quot;No Instances are avaialble&quot;);</span>
+        }
+
+<span class="nc" id="L849">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(instanceIds);</span>
+<span class="nc" id="L850">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+
+<span class="nc" id="L852">    }</span>
+
+    /**
+     * Deprecated due to misleading name. This function only uses the &quot;name&quot; tag value to filter.
+     * Replaced with terminateEC2InstancesByName();
+     */
+    @Deprecated
+    public void terminateEc2InstancesByTags(String tagName, int numberOfInstances) {
+<span class="nc" id="L860">        List&lt;String&gt; instanceIds = new ArrayList&lt;String&gt;();</span>
+
+<span class="nc" id="L862">        List tags = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L863">        tags.add(tagName);</span>
+
+<span class="nc" id="L865">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+
+<span class="nc" id="L867">        Filter filter1 = new Filter(&quot;tag:Name&quot;, tags);</span>
+
+<span class="nc" id="L869">        DescribeInstancesResult result = ec2Delegator.getEc2().describeInstances(request.withFilters(filter1));</span>
+<span class="nc" id="L870">        List&lt;Reservation&gt; reservations = result.getReservations();</span>
+
+<span class="nc bnc" id="L872" title="All 2 branches missed.">        for (Reservation reservation : reservations) {</span>
+<span class="nc" id="L873">            List&lt;Instance&gt; instances = reservation.getInstances();</span>
+
+
+<span class="nc bnc" id="L876" title="All 2 branches missed.">            for (Instance instance : instances) {</span>
+<span class="nc" id="L877">                instanceIds.add(instance.getInstanceId());</span>
+<span class="nc" id="L878">            }</span>
+<span class="nc" id="L879">        }</span>
+
+<span class="nc bnc" id="L881" title="All 2 branches missed.">        if (instanceIds.isEmpty()) {</span>
+<span class="nc" id="L882">            throw new ResourceNotFoundException(&quot;No Instances are avaialble&quot;);</span>
+<span class="nc bnc" id="L883" title="All 2 branches missed.">        } else if (numberOfInstances &gt; instanceIds.size()) {</span>
+<span class="nc" id="L884">           logger.debug(&quot;EC2Raider: Number of Instance provided for termination is greater than running instances, changing number from: &quot; + numberOfInstances + &quot; to &quot; + instanceIds.size());</span>
+<span class="nc" id="L885">            numberOfInstances = instanceIds.size();</span>
+
+        }
+
+<span class="nc" id="L889">        TerminateInstancesRequest request1 = new TerminateInstancesRequest().withInstanceIds(instanceIds.subList(0, numberOfInstances));</span>
+
+<span class="nc" id="L891">        TerminateInstancesResult response = ec2Delegator.getEc2().terminateInstances(request1);</span>
+<span class="nc" id="L892">    }</span>
+
+    /**
+     * Deprecated due to misleading name. This function only uses the &quot;name&quot; tag value to filter. Furthermore, the EC2
+     * tag used only contains the name.
+     * Replaced with getEc2InstancesForAvailabilityZone();
+     */
+    @Deprecated
+    public List&lt;EC2InstanceTO&gt; getInstancesForAZ(String tag, String availabilityZoneName) {
+
+<span class="nc bnc" id="L902" title="All 4 branches missed.">        if (tag.isEmpty() || tag == null) {</span>
+<span class="nc" id="L903">            throw new InvalidInputDataException(&quot;Empty/Null tag provided in request&quot;);</span>
+<span class="nc bnc" id="L904" title="All 4 branches missed.">        } else if (availabilityZoneName.isEmpty() || availabilityZoneName == null) {</span>
+<span class="nc" id="L905">            throw new InvalidInputDataException(&quot;Empty/Null availabilityZoneName provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L908">        DescribeInstancesRequest request = new DescribeInstancesRequest();</span>
+
+<span class="nc" id="L910">        ArrayList&lt;String&gt; tags = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L911">        tags.add(tag);</span>
+
+<span class="nc" id="L913">        Filter filter1 = new Filter(&quot;tag:Name&quot;, tags);</span>
+
+<span class="nc" id="L915">        List&lt;String&gt; result =</span>
+<span class="nc" id="L916">                ec2Delegator.getEc2().describeInstances(request.withFilters(filter1))</span>
+<span class="nc" id="L917">                        .getReservations()</span>
+<span class="nc" id="L918">                        .stream()</span>
+<span class="nc" id="L919">                        .map(Reservation::getInstances)</span>
+<span class="nc" id="L920">                        .flatMap(l -&gt; l.stream())</span>
+<span class="nc" id="L921">                        .collect(Collectors.toList())</span>
+<span class="nc" id="L922">                        .stream()</span>
+<span class="nc bnc" id="L923" title="All 4 branches missed.">                        .filter(x -&gt; x.getPlacement().getAvailabilityZone().equalsIgnoreCase(availabilityZoneName) &amp;&amp; x.getState().getName().equalsIgnoreCase(&quot;running&quot;))</span>
+<span class="nc" id="L924">                        .map(Instance::getInstanceId)</span>
+<span class="nc" id="L925">                        .collect(Collectors.toList());</span>
+
+
+<span class="nc bnc" id="L928" title="All 2 branches missed.">        if (result.isEmpty()) {</span>
+<span class="nc" id="L929">            throw new ResourceNotFoundException(&quot;Unable to find EC2 instances for tag: &quot; + tag + &quot; with AZ: &quot; + availabilityZoneName);</span>
+        }
+
+<span class="nc" id="L932">        List&lt;EC2InstanceTO&gt; list = getEC2InstancesByIds(result);</span>
+<span class="nc" id="L933">        Collections.shuffle(list);</span>
+<span class="nc" id="L934">        return list;</span>
+
+    }
+
+    /**
+     * Deprecated due to misleading name -- only the tag value matters.
+     * Replaced with getInstancesFromAnyTags().
+     */
+    @Deprecated
+    public EC2InstanceTO getEC2StatusByTag(String tag) {
+<span class="nc" id="L944">        EC2InstanceTO ec2InstanceTO = null;</span>
+<span class="nc bnc" id="L945" title="All 2 branches missed.">        for (Reservation res : ec2Delegator.getEc2().describeInstances().getReservations()) {</span>
+<span class="nc bnc" id="L946" title="All 2 branches missed.">            for (Instance i : res.getInstances()) {</span>
+<span class="nc bnc" id="L947" title="All 2 branches missed.">                if (i.getState().getName().equalsIgnoreCase(&quot;running&quot;)) {</span>
+<span class="nc bnc" id="L948" title="All 2 branches missed.">                    for (Tag t : i.getTags()) {</span>
+<span class="nc bnc" id="L949" title="All 2 branches missed.">                        if (t.getValue().equalsIgnoreCase(tag)) {</span>
+<span class="nc" id="L950">                            ec2InstanceTO = this.createEc2Instance(i);</span>
+<span class="nc" id="L951">                            break;</span>
+                        }
+<span class="nc" id="L953">                    }</span>
+                }
+<span class="nc" id="L955">            }</span>
+<span class="nc" id="L956">        }</span>
+
+<span class="nc bnc" id="L958" title="All 2 branches missed.">        if (ec2InstanceTO == null) {</span>
+<span class="nc" id="L959">            throw new ResourceNotFoundException(&quot;Unable to find EC2 Instances with given tag: &quot; + tag);</span>
+        }
+<span class="nc" id="L961">        return ec2InstanceTO;</span>
+
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

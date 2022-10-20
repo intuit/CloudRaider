@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommandUtility.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.utils</a> &gt; <span class="el_source">CommandUtility.java</span></div><h1>CommandUtility.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.utils;
+
+import sun.reflect.annotation.ExceptionProxy;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Utility class to read and parse commands with parameters.
+ */
+<span class="nc" id="L42">public class CommandUtility {</span>
+
+    /**
+     * Parses file provided to generate commands with the given parameters.
+     *
+     * @param fileName name of file to parse
+     * @param params   parameters for the given command
+     * @return List of (String) commands to execute
+     */
+    public static List&lt;String&gt; getCommandsFromFile(String fileName, String... params) {
+<span class="nc" id="L52">        List&lt;String&gt; commands = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L54">        try (Stream&lt;String&gt; stream = Files.lines(Paths.get(ClassLoader.getSystemResource(fileName).toURI()))) {</span>
+
+            // stream to ignore comments and empty lines
+            // replace parameters using MessageFormat
+<span class="nc" id="L58">            commands = stream</span>
+<span class="nc bnc" id="L59" title="All 4 branches missed.">                    .filter(line -&gt; !line.startsWith(&quot;#&quot;) &amp;&amp; (!line.isEmpty()))</span>
+<span class="nc" id="L60">                    .map(line-&gt; MessageFormat.format(line, params))</span>
+<span class="nc" id="L61">                    .collect(Collectors.toList());</span>
+
+<span class="nc" id="L63">        } catch (URISyntaxException e) {</span>
+<span class="nc" id="L64">            e.printStackTrace();</span>
+<span class="nc" id="L65">        } catch (IOException ioe) {</span>
+<span class="nc" id="L66">            ioe.printStackTrace();</span>
+<span class="nc" id="L67">        }</span>
+
+<span class="nc" id="L69">        return commands;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

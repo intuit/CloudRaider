@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HealthCheckTarget.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.model</a> &gt; <span class="el_source">HealthCheckTarget.java</span></div><h1>HealthCheckTarget.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.model;
+
+/**
+ * Object to track Load Balancer heath check path/port/protocol information.
+ * &lt;p&gt;
+  */
+<span class="fc" id="L31">public class HealthCheckTarget {</span>
+
+    /**
+     * The enum Ping protocol.
+     */
+<span class="fc" id="L36">    public enum PingProtocol {</span>
+        /**
+         * Tcp ping protocol.
+         */
+<span class="fc" id="L40">        TCP,</span>
+        /**
+         * Http ping protocol.
+         */
+<span class="fc" id="L44">        HTTP,</span>
+        /**
+         * Https ping protocol.
+         */
+<span class="fc" id="L48">        HTTPS,</span>
+        /**
+         * Ssl ping protocol.
+         */
+<span class="fc" id="L52">        SSL;</span>
+    }
+
+    private PingProtocol pingProtocol;
+    private String pingPath;
+    private Integer pingPort;
+
+    /**
+     * Gets target.
+     *
+     * @return the target
+     */
+    public String getTarget() {
+<span class="fc" id="L65">        return getPingProtocol() + &quot;:&quot; + pingPort + getPingPath();</span>
+    }
+
+
+    /**
+     * Gets ping path.
+     *
+     * @return the ping path
+     */
+    public String getPingPath() {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        return pingPath != null ? pingPath : &quot;&quot;;</span>
+    }
+
+    /**
+     * Sets ping path.
+     *
+     * @param pingPath the ping path
+     */
+    public void setPingPath(String pingPath) {
+<span class="fc" id="L84">        this.pingPath = pingPath;</span>
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Gets ping protocol.
+     *
+     * @return the ping protocol
+     */
+    public PingProtocol getPingProtocol() {
+<span class="fc" id="L93">        return pingProtocol;</span>
+    }
+
+    /**
+     * Sets ping protocol.
+     *
+     * @param pingProtocol the ping protocol
+     */
+    public void setPingProtocol(PingProtocol pingProtocol) {
+<span class="fc" id="L102">        this.pingProtocol = pingProtocol;</span>
+<span class="fc" id="L103">    }</span>
+
+    /**
+     * Gets ping port.
+     *
+     * @return the ping port
+     */
+    public Integer getPingPort() {
+<span class="nc" id="L111">        return pingPort;</span>
+    }
+
+    /**
+     * Sets ping port.
+     *
+     * @param pingPort the ping port
+     */
+    public void setPingPort(Integer pingPort) {
+<span class="fc" id="L120">        validatePingPort(pingPort);</span>
+<span class="fc" id="L121">        this.pingPort = pingPort;</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Checks if the port value specified is within the possible range of ports.
+     *
+     * @param pingPort port number
+     */
+    private void validatePingPort(int pingPort){
+<span class="fc" id="L130">        validateNumRange(&quot;pingPort&quot;, pingPort, 1, 65535);</span>
+<span class="fc" id="L131">    }</span>
+
+    private void validateNumRange(String name, Integer num, int min, int max) {
+<span class="pc bpc" id="L134" title="2 of 6 branches missed.">        if ( num == null || num &lt; min || num &gt; max) throw new IllegalArgumentException( name + &quot; is out of range &quot; + min + &quot; to &quot; + max);</span>
+<span class="fc" id="L135">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L139">        return &quot;HealthCheckTarget{&quot; +</span>
+                &quot;pingProtocol=&quot; + pingProtocol +
+                &quot;, pingPath='&quot; + pingPath + '\'' +
+                &quot;, pingPort=&quot; + pingPort +
+<span class="nc" id="L143">                '}' + System.lineSeparator() +</span>
+<span class="nc" id="L144">                &quot;getTarget() &quot; + getTarget();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

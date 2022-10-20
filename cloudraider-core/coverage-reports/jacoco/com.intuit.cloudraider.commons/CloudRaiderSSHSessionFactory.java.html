@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CloudRaiderSSHSessionFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.commons</a> &gt; <span class="el_source">CloudRaiderSSHSessionFactory.java</span></div><h1>CloudRaiderSSHSessionFactory.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.commons;
+
+
+import com.google.common.base.Strings;
+import com.jcraft.jsch.*;
+import com.jcraft.jsch.agentproxy.AgentProxyException;
+import com.jcraft.jsch.agentproxy.Connector;
+import com.jcraft.jsch.agentproxy.ConnectorFactory;
+import com.jcraft.jsch.agentproxy.RemoteIdentityRepository;
+import com.pastdev.jsch.SessionFactory;
+import com.pastdev.jsch.Slf4jBridge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+/**
+ * The CloudRaiderSSHSessionFactory implementation of {@link
+ * SessionFactory}*. This class provides sane defaults for all
+ * &lt;i&gt;conventional&lt;/i&gt; configuration including
+ *
+ * &lt;p style=&quot;margin-left: 20px;&quot;&gt;
+ * &lt;b&gt;username&lt;/b&gt;: System property &lt;code&gt;user.name&lt;/code&gt; &lt;br&gt;
+ * &lt;b&gt;hostname&lt;/b&gt;: localhost &lt;br&gt;
+ * &lt;b&gt;port&lt;/b&gt;: 22 &lt;br&gt;
+ * &lt;b&gt;.ssh directory:&lt;/b&gt; System property &lt;code&gt;jsch.dotSsh&lt;/code&gt;, or system
+ * property &lt;code&gt;user.home&lt;/code&gt; concatenated with &lt;code&gt;&quot;/.ssh&quot;&lt;/code&gt; &lt;br&gt;
+ * &lt;b&gt;known hosts:&lt;/b&gt; System property &lt;code&gt;jsch.knownHosts.file&lt;/code&gt; or,
+ * .ssh directory concatenated with &lt;code&gt;&quot;/known_hosts&quot;&lt;/code&gt;. &lt;br&gt;
+ * &lt;b&gt;private keys:&lt;/b&gt; First checks for an agent proxy using
+ * {@link ConnectorFactory#createConnector()}, then system property
+ * &lt;code&gt;jsch.privateKey.files&lt;/code&gt; split on &lt;code&gt;&quot;,&quot;&lt;/code&gt;, otherwise, .ssh
+ * directory concatenated with all 3 of &lt;code&gt;&quot;/id_rsa&quot;&lt;/code&gt;,
+ * &lt;code&gt;&quot;/id_dsa&quot;&lt;/code&gt;, and &lt;code&gt;&quot;/id_ecdsa&quot;&lt;/code&gt; if they exist.
+ * &lt;/p&gt;
+ */
+public class CloudRaiderSSHSessionFactory implements SessionFactory {
+<span class="nc" id="L65">    private static Logger logger = LoggerFactory.getLogger(CloudRaiderSSHSessionFactory.class);</span>
+    /**
+     * The constant PROPERTY_JSCH_DOT_SSH.
+     */
+    public static final String PROPERTY_JSCH_DOT_SSH = &quot;jsch.dotSsh&quot;;
+    /**
+     * The constant PROPERTY_JSCH_KNOWN_HOSTS_FILE.
+     */
+    public static final String PROPERTY_JSCH_KNOWN_HOSTS_FILE = &quot;jsch.knownHosts.file&quot;;
+    /**
+     * The constant PROPERTY_JSCH_PRIVATE_KEY_FILES.
+     */
+    public static final String PROPERTY_JSCH_PRIVATE_KEY_FILES = &quot;jsch.privateKey.files&quot;;
+
+    private Map&lt;String, String&gt; config;
+    private File dotSshDir;
+    private String hostname;
+    private JSch jsch;
+    private String password;
+<span class="nc" id="L84">    private int port = SSH_PORT;</span>
+    private Proxy proxy;
+    private UserInfo userInfo;
+    private String username;
+
+    /**
+     * Creates a CloudRaiderSSHSessionFactory.
+     */
+    public CloudRaiderSSHSessionFactory() {
+<span class="nc" id="L93">        this(null, null, null);</span>
+<span class="nc" id="L94">    }</span>
+
+    /**
+     * Constructs a DefaultSessionFactory with the supplied properties.
+     *
+     * @param username The username
+     * @param hostname The hostname
+     * @param port     The port
+     */
+<span class="nc" id="L103">    public CloudRaiderSSHSessionFactory(String username, String hostname, Integer port) {</span>
+<span class="nc" id="L104">        JSch.setLogger(new Slf4jBridge());</span>
+<span class="nc" id="L105">        jsch = new JSch();</span>
+
+        try {
+<span class="nc" id="L108">            setDefaultIdentities();</span>
+<span class="nc" id="L109">        } catch (JSchException e) {</span>
+<span class="nc" id="L110">            logger.warn(&quot;Unable to set default identities: &quot;, e);</span>
+<span class="nc" id="L111">        }</span>
+
+        try {
+<span class="nc" id="L114">            setDefaultKnownHosts();</span>
+<span class="nc" id="L115">        } catch (JSchException e) {</span>
+<span class="nc" id="L116">            logger.warn(&quot;Unable to set default known_hosts: &quot;, e);</span>
+<span class="nc" id="L117">        }</span>
+
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (username == null) {</span>
+<span class="nc" id="L120">            this.username = System.getProperty(&quot;user.name&quot;).toLowerCase();</span>
+        } else {
+<span class="nc" id="L122">            this.username = username;</span>
+        }
+
+<span class="nc bnc" id="L125" title="All 2 branches missed.">        if (hostname == null) {</span>
+<span class="nc" id="L126">            this.hostname = &quot;localhost&quot;;</span>
+        } else {
+<span class="nc" id="L128">            this.hostname = hostname;</span>
+        }
+
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        if (port == null) {</span>
+<span class="nc" id="L132">            this.port = 22;</span>
+        } else {
+<span class="nc" id="L134">            this.port = port;</span>
+        }
+<span class="nc" id="L136">    }</span>
+
+<span class="nc" id="L138">    private CloudRaiderSSHSessionFactory(JSch jsch, String username, String hostname, int port, Proxy proxy) {</span>
+<span class="nc" id="L139">        this.jsch = jsch;</span>
+<span class="nc" id="L140">        this.username = username;</span>
+<span class="nc" id="L141">        this.hostname = hostname;</span>
+<span class="nc" id="L142">        this.port = port;</span>
+<span class="nc" id="L143">        this.proxy = proxy;</span>
+<span class="nc" id="L144">    }</span>
+
+    private void clearIdentityRepository() throws JSchException {
+<span class="nc" id="L147">        jsch.setIdentityRepository(null); // revert to default identity repo</span>
+<span class="nc" id="L148">        jsch.removeAllIdentity();</span>
+<span class="nc" id="L149">    }</span>
+
+    private File dotSshDir() {
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        if (dotSshDir == null) {</span>
+<span class="nc" id="L153">            String dotSshString = System.getProperty(PROPERTY_JSCH_DOT_SSH);</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">            if (dotSshString != null) {</span>
+<span class="nc" id="L155">                dotSshDir = new File(dotSshString);</span>
+            } else {
+<span class="nc" id="L157">                dotSshDir = new File(</span>
+<span class="nc" id="L158">                        new File(System.getProperty(&quot;user.home&quot;)),</span>
+                        &quot;.ssh&quot;);
+            }
+        }
+<span class="nc" id="L162">        return dotSshDir;</span>
+    }
+
+
+    public String getHostname() {
+<span class="nc" id="L167">        return hostname;</span>
+    }
+
+    public int getPort() {
+<span class="nc" id="L171">        return port;</span>
+    }
+
+    public Proxy getProxy() {
+<span class="nc" id="L175">        return proxy;</span>
+    }
+
+    public String getUsername() {
+<span class="nc" id="L179">        return username;</span>
+    }
+
+    public UserInfo getUserInfo() {
+<span class="nc" id="L183">        return userInfo;</span>
+    }
+
+    public Session newSession() throws JSchException {
+<span class="nc" id="L187">        Session session = jsch.getSession(username, hostname, port);</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        if (config != null) {</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            for (String key : config.keySet()) {</span>
+<span class="nc" id="L190">                session.setConfig(key, config.get(key));</span>
+<span class="nc" id="L191">            }</span>
+        }
+<span class="nc bnc" id="L193" title="All 2 branches missed.">        if (proxy != null) {</span>
+<span class="nc" id="L194">            session.setProxy(proxy);</span>
+        }
+<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (password != null) {</span>
+<span class="nc" id="L197">            session.setPassword(password);</span>
+        }
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        if (userInfo != null) {</span>
+<span class="nc" id="L200">            session.setUserInfo(userInfo);</span>
+        }
+<span class="nc" id="L202">        return session;</span>
+    }
+
+    public SessionFactoryBuilder newSessionFactoryBuilder() {
+<span class="nc" id="L206">        return new SessionFactoryBuilder(jsch, username, hostname, port, proxy, config, userInfo) {</span>
+            @Override
+            public SessionFactory build() {
+<span class="nc" id="L209">                CloudRaiderSSHSessionFactory sessionFactory = new CloudRaiderSSHSessionFactory(jsch, username, hostname, port, proxy);</span>
+<span class="nc" id="L210">                sessionFactory.config = config;</span>
+<span class="nc" id="L211">                sessionFactory.password = password;</span>
+<span class="nc" id="L212">                sessionFactory.userInfo = userInfo;</span>
+<span class="nc" id="L213">                return (SessionFactory) sessionFactory;</span>
+            }
+        };
+    }
+
+    /**
+     * Sets the configuration options for the sessions created by this factory.
+     * This method will replace the current SessionFactory &lt;code&gt;config&lt;/code&gt;
+     * map. If you want to add, rather than replace, see
+     * {@link #setConfig(String, String)}. All of these options will be added
+     * one at a time using
+     * {@link Session#setConfig(String, String)
+     * Session.setConfig(String, String)}*. Details on the supported options can
+     * be found in the source for {@link Session#applyConfig()}.
+     *
+     * @param config The configuration options
+     * @see Session#setConfig(Hashtable) Session#setConfig(Hashtable)
+     * @see Session#applyConfig() Session#applyConfig()
+     */
+    public void setConfig(Map&lt;String, String&gt; config) {
+<span class="nc" id="L233">        this.config = config;</span>
+<span class="nc" id="L234">    }</span>
+
+    /**
+     * Adds a single configuration options for the sessions created by this
+     * factory. Details on the supported options can be found in the source for
+     * {@link Session#applyConfig()}.
+     *
+     * @param key   The name of the option
+     * @param value The value of the option
+     * @see #setConfig(Map) #setConfig(Map)
+     * @see Session#setConfig(Hashtable) Session#setConfig(Hashtable)
+     * @see Session#applyConfig() Session#applyConfig()
+     */
+    public void setConfig(String key, String value) {
+<span class="nc bnc" id="L248" title="All 2 branches missed.">        if (config == null) {</span>
+<span class="nc" id="L249">            config = new HashMap&lt;String, String&gt;();</span>
+        }
+<span class="nc" id="L251">        config.put(key, value);</span>
+<span class="nc" id="L252">    }</span>
+
+    private void setDefaultKnownHosts() throws JSchException {
+<span class="nc" id="L255">        String knownHosts = System.getProperty(PROPERTY_JSCH_KNOWN_HOSTS_FILE);</span>
+<span class="nc bnc" id="L256" title="All 4 branches missed.">        if (knownHosts != null &amp;&amp; !Strings.isNullOrEmpty(knownHosts)) {</span>
+<span class="nc" id="L257">            setKnownHosts(knownHosts);</span>
+        } else {
+<span class="nc" id="L259">            File knownHostsFile = new File(dotSshDir(), &quot;known_hosts&quot;);</span>
+<span class="nc bnc" id="L260" title="All 2 branches missed.">            if (knownHostsFile.exists()) {</span>
+<span class="nc" id="L261">                setKnownHosts(knownHostsFile.getAbsolutePath());</span>
+            }
+        }
+<span class="nc" id="L264">    }</span>
+
+    /**
+     * Print identities.
+     *
+     * @throws JSchException the j sch exception
+     */
+    public void printIdentities() throws JSchException {
+        try {
+<span class="nc" id="L273">            Connector connector = ConnectorFactory.getDefault()</span>
+<span class="nc" id="L274">                    .createConnector();</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">            if (connector != null) {</span>
+<span class="nc" id="L276">                RemoteIdentityRepository repository = new RemoteIdentityRepository(connector);</span>
+<span class="nc" id="L277">                Vector&lt;Identity&gt; identities = repository.getIdentities();</span>
+<span class="nc bnc" id="L278" title="All 2 branches missed.">                if (identities.size() &gt; 0) {</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">                    for (int i = 0; i &lt; identities.size(); i++) {</span>
+<span class="nc" id="L280">                        logger.debug(identities.get(i).getName() + &quot; -&gt;  &quot; + identities.get(i).getPublicKeyBlob() + &quot; -&gt; &quot; + identities.get(i).getAlgName());</span>
+
+                    }
+                } else {
+<span class="nc" id="L284">                    logger.debug(&quot;No identities from AgentProxy&quot;);</span>
+                }
+            }
+
+<span class="nc" id="L288">            Vector&lt;Identity&gt; identities = jsch.getIdentityRepository().getIdentities();</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">            if (identities.size() &gt; 0) {</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">                for (int i = 0; i &lt; identities.size(); i++) {</span>
+<span class="nc" id="L291">                    logger.debug(identities.get(i).getName() + &quot; -&gt;  &quot; + identities.get(i).getPublicKeyBlob() + &quot; -&gt; &quot; + identities.get(i).getAlgName());</span>
+                }
+            } else {
+<span class="nc" id="L294">                logger.debug(&quot;No identities!&quot;);</span>
+            }
+<span class="nc" id="L296">        } catch (AgentProxyException e) {</span>
+<span class="nc" id="L297">            logger.debug(&quot;Failed to Print any keys from AgentProxy:&quot;, e);</span>
+<span class="nc" id="L298">        }</span>
+<span class="nc" id="L299">    }</span>
+
+    private void setDefaultIdentities() throws JSchException {
+<span class="nc" id="L302">        boolean identitiesSet = false;</span>
+        try {
+<span class="nc" id="L304">            Connector connector = ConnectorFactory.getDefault()</span>
+<span class="nc" id="L305">                    .createConnector();</span>
+<span class="nc bnc" id="L306" title="All 2 branches missed.">            if (connector != null) {</span>
+<span class="nc" id="L307">                logger.info(&quot;An AgentProxy Connector was found, check for identities&quot;);</span>
+<span class="nc" id="L308">                RemoteIdentityRepository repository = new RemoteIdentityRepository(connector);</span>
+<span class="nc" id="L309">                Vector&lt;Identity&gt; identities = repository.getIdentities();</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">                if (identities.size() &gt; 0) {</span>
+<span class="nc" id="L311">                    logger.info(&quot;Using AgentProxy identities: {}&quot;, identities);</span>
+<span class="nc" id="L312">                    setIdentityRepository(repository);</span>
+<span class="nc" id="L313">                    identitiesSet = true;</span>
+                }
+            }
+<span class="nc" id="L316">        } catch (AgentProxyException e) {</span>
+<span class="nc" id="L317">            logger.debug(&quot;Failed to load any keys from AgentProxy:&quot;, e);</span>
+<span class="nc" id="L318">        }</span>
+<span class="nc bnc" id="L319" title="All 2 branches missed.">        if (!identitiesSet) {</span>
+<span class="nc" id="L320">            String privateKeyFilesString = System.getProperty(PROPERTY_JSCH_PRIVATE_KEY_FILES);</span>
+<span class="nc bnc" id="L321" title="All 4 branches missed.">            if (privateKeyFilesString != null &amp;&amp; !Strings.isNullOrEmpty(privateKeyFilesString)) {</span>
+<span class="nc" id="L322">                logger.info(&quot;Using local identities from {}: {}&quot;,</span>
+                        PROPERTY_JSCH_PRIVATE_KEY_FILES, privateKeyFilesString);
+<span class="nc" id="L324">                setIdentitiesFromPrivateKeys(Arrays.asList(privateKeyFilesString.split(&quot;,&quot;)));</span>
+<span class="nc" id="L325">                identitiesSet = true;</span>
+            }
+        }
+<span class="nc bnc" id="L328" title="All 2 branches missed.">        if (!identitiesSet) {</span>
+<span class="nc" id="L329">            List&lt;String&gt; privateKeyFiles = new ArrayList&lt;String&gt;();</span>
+<span class="nc bnc" id="L330" title="All 2 branches missed.">            for (File file : new File[]{</span>
+<span class="nc" id="L331">                    new File(dotSshDir(), &quot;id_rsa&quot;),</span>
+<span class="nc" id="L332">                    new File(dotSshDir(), &quot;id_dsa&quot;),</span>
+<span class="nc" id="L333">                    new File(dotSshDir(), &quot;id_ecdsa&quot;)}) {</span>
+<span class="nc bnc" id="L334" title="All 2 branches missed.">                if (file.exists()) {</span>
+<span class="nc" id="L335">                    privateKeyFiles.add(file.getAbsolutePath());</span>
+                }
+            }
+<span class="nc" id="L338">            logger.info(&quot;Using local identities: {}&quot;, privateKeyFiles);</span>
+<span class="nc" id="L339">            setIdentitiesFromPrivateKeys(privateKeyFiles);</span>
+        }
+<span class="nc" id="L341">    }</span>
+
+    /**
+     * Sets the hostname.
+     *
+     * @param hostname The hostname.
+     */
+    public void setHostname(String hostname) {
+<span class="nc" id="L349">        this.hostname = hostname;</span>
+<span class="nc" id="L350">    }</span>
+
+    /**
+     * Configures this factory to use a single identity authenticated by the
+     * supplied private key. The private key should be the path to a private key
+     * file in OpenSSH format. Clears out the current {@link IdentityRepository}
+     * before adding this key.
+     *
+     * @param privateKey Path to a private key file
+     * @param passphrase the passphrase
+     * @throws JSchException If the key is invalid
+     */
+    public void setIdentityFromPrivateKey(String privateKey, String passphrase) throws JSchException {
+<span class="nc" id="L363">        clearIdentityRepository();</span>
+<span class="nc" id="L364">        jsch.addIdentity(privateKey, passphrase);</span>
+
+<span class="nc" id="L366">    }</span>
+
+    /**
+     * Add identity from private key.
+     *
+     * @param privateKey the private key
+     * @param passphrase the passphrase
+     * @throws JSchException the j sch exception
+     */
+    public void addIdentityFromPrivateKey(String privateKey, String passphrase) throws JSchException {
+<span class="nc" id="L376">        jsch.addIdentity(privateKey, passphrase);</span>
+
+<span class="nc" id="L378">    }</span>
+
+
+    /**
+     * Configures this factory to use a single identity authenticated by the
+     * supplied private key. The private key should be the path to a private key
+     * file in OpenSSH format. Clears out the current {@link IdentityRepository}
+     * before adding this key.
+     *
+     * @param privateKey private key content as byte array
+     * @param passphrase the passphrase
+     * @throws JSchException If the key is invalid
+     */
+    public void setIdentityFromPrivateKey(byte[] privateKey, String passphrase) throws JSchException {
+<span class="nc" id="L392">        clearIdentityRepository();</span>
+<span class="nc" id="L393">        jsch.addIdentity(&quot;&quot;, privateKey, (byte[]) null, passphrase.getBytes(StandardCharsets.UTF_8));</span>
+
+<span class="nc" id="L395">    }</span>
+
+    /**
+     * Configures this factory to use a list of identities authenticated by the
+     * supplied private keys. The private keys should be the paths to a private
+     * key files in OpenSSH format. Clears out the current
+     * {@link IdentityRepository} before adding these keys.
+     *
+     * @param privateKeys A list of paths to private key files
+     * @throws JSchException If one (or more) of the keys are invalid
+     */
+    public void setIdentitiesFromPrivateKeys(List&lt;String&gt; privateKeys) throws JSchException {
+<span class="nc" id="L407">        clearIdentityRepository();</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">        for (String privateKey : privateKeys) {</span>
+<span class="nc" id="L409">            jsch.addIdentity(privateKey);</span>
+<span class="nc" id="L410">        }</span>
+<span class="nc" id="L411">    }</span>
+
+    /**
+     * Sets the {@link IdentityRepository} for this factory. This will replace
+     * any current IdentityRepository, so you should be sure to call this before
+     * any of the &lt;code&gt;setIdentit(y|ies)Xxx&lt;/code&gt; if you plan on using both.
+     *
+     * @param identityRepository The identity repository
+     * @see JSch#setIdentityRepository(IdentityRepository) JSch#setIdentityRepository(IdentityRepository)
+     */
+    public void setIdentityRepository(IdentityRepository identityRepository) {
+<span class="nc" id="L422">        jsch.setIdentityRepository(identityRepository);</span>
+<span class="nc" id="L423">    }</span>
+
+    /**
+     * Sets the known hosts from the stream. Mostly useful if you distribute
+     * your known_hosts in the jar for your application rather than allowing
+     * users to manage their own known hosts.
+     *
+     * @param knownHosts A stream of known hosts
+     * @throws JSchException If an I/O error occurs
+     * @see JSch#setKnownHosts(InputStream) JSch#setKnownHosts(InputStream)
+     */
+    public void setKnownHosts(InputStream knownHosts) throws JSchException {
+<span class="nc" id="L435">        jsch.setKnownHosts(knownHosts);</span>
+<span class="nc" id="L436">    }</span>
+
+    /**
+     * Sets the known hosts from a file at path &lt;code&gt;knownHosts&lt;/code&gt;.
+     *
+     * @param knownHosts The path to a known hosts file
+     * @throws JSchException If an I/O error occurs
+     * @see JSch#setKnownHosts(String) JSch#setKnownHosts(String)
+     */
+    public void setKnownHosts(String knownHosts) throws JSchException {
+<span class="nc" id="L446">        jsch.setKnownHosts(knownHosts);</span>
+<span class="nc" id="L447">    }</span>
+
+    /**
+     * Sets the {@code password} used to authenticate {@code username}. This
+     * mode of authentication is not recommended as it would keep the password
+     * in memory and if the application dies and writes a heap dump, it would be
+     * available. Using {@link Identity} would be better, or even using ssh
+     * agent support.
+     *
+     * @param password the password for {@code username}
+     */
+    public void setPassword(String password) {
+<span class="nc" id="L459">        this.password = password;</span>
+<span class="nc" id="L460">    }</span>
+
+    /**
+     * Sets the port.
+     *
+     * @param port The port
+     */
+    public void setPort(int port) {
+<span class="nc" id="L468">        this.port = port;</span>
+<span class="nc" id="L469">    }</span>
+
+    /**
+     * Sets the proxy through which all connections will be piped.
+     *
+     * @param proxy The proxy
+     */
+    public void setProxy(Proxy proxy) {
+<span class="nc" id="L477">        this.proxy = proxy;</span>
+<span class="nc" id="L478">    }</span>
+
+    /**
+     * Sets the {@code UserInfo} for use with {@code keyboard-interactive}
+     * authentication.  This may be useful, however, setting the password
+     * with {@link #setPassword(String)} is likely sufficient.
+     *
+     * @param userInfo the user info
+     * @see &lt;a href=&quot;http://www.jcraft.com/jsch/examples/UserAuthKI.java.html&quot;&gt;Keyboard Interactive Authentication Example&lt;/a&gt;
+     */
+    public void setUserInfo(UserInfo userInfo) {
+<span class="nc" id="L489">        this.userInfo = userInfo;</span>
+<span class="nc" id="L490">    }</span>
+
+    /**
+     * Sets the username.
+     *
+     * @param username The username
+     */
+    public void setUsername(String username) {
+<span class="nc" id="L498">        this.username = username;</span>
+<span class="nc" id="L499">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc bnc" id="L503" title="All 2 branches missed.">        return (proxy == null ? &quot;&quot; : proxy.toString() + &quot; &quot;) +</span>
+                &quot;ssh://&quot; + username + &quot;@&quot; + hostname + &quot;:&quot; + port;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

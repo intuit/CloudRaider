@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ElastiCacheStepDefinitions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.steps</a> &gt; <span class="el_source">ElastiCacheStepDefinitions.java</span></div><h1>ElastiCacheStepDefinitions.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.steps;
+
+import com.intuit.cloudraider.core.impl.ElastiCacheRaiderImpl;
+import com.intuit.cloudraider.core.interfaces.ElastiCacheRaider;
+import com.intuit.cloudraider.cucumber.model.ExecutionStateCache;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+/**
+ * Cucumber Step Definitions for AWS ElastiCache functionality.
+ */
+public class ElastiCacheStepDefinitions {
+
+    @Autowired
+    @Qualifier(&quot;elastiCacheRaiderBean&quot;)
+    private ElastiCacheRaider elastiCacheRaider;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L50">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private ExecutionStateCache executionStateCache;
+
+
+    /**
+     * Gets execution state cache.
+     *
+     * @return the execution state cache
+     */
+    public ExecutionStateCache getExecutionStateCache() {
+<span class="nc" id="L62">        return executionStateCache;</span>
+    }
+
+    /**
+     * Sets execution state cache.
+     *
+     * @param executionStateCache the execution state cache
+     */
+    public void setExecutionStateCache(ExecutionStateCache executionStateCache) {
+<span class="nc" id="L71">        this.executionStateCache = executionStateCache;</span>
+<span class="nc" id="L72">    }</span>
+
+    /**
+     * Instantiates a new Elasti cache step definitions.
+     */
+<span class="nc" id="L77">    public ElastiCacheStepDefinitions() {</span>
+<span class="nc" id="L78">        elastiCacheRaider = new ElastiCacheRaiderImpl();</span>
+
+<span class="nc" id="L80">    }</span>
+
+    /**
+     * Sets the ElastiCache cluster name.
+     *
+     * @param elasticCacheClusterName name of cluster
+     * @return the elasti cache step definitions
+     */
+    @Given(&quot;^ElastiCache \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public ElastiCacheStepDefinitions givenElastiCacheCluster(String elasticCacheClusterName) {
+<span class="nc" id="L90">        executionStateCache.setElastiCacheClusterName(elasticCacheClusterName);</span>
+<span class="nc" id="L91">        return this;</span>
+    }
+
+    /**
+     * Reboot the provided number of the nodes on the current ElastiCache cluster.
+     *
+     * @param numNodes number of nodes to reboot
+     * @return the elasti cache step definitions
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^reboot ElastiCache nodes (\\d+)$&quot;)
+    public ElastiCacheStepDefinitions rebootElastiCacheCluster(int numNodes) throws Throwable {
+
+<span class="nc" id="L104">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+<span class="nc bnc" id="L105" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L106">            throw new RuntimeException(&quot;Unable to reboot elastiCache cluster as no cluster information is available&quot;);</span>
+        }
+<span class="nc" id="L108">        elastiCacheRaider.rebootElastiCacheCluster(clusterName, numNodes);</span>
+<span class="nc" id="L109">        return this;</span>
+    }
+
+    /**
+     * Asserts that ElastiCache state matches what is expected.
+     *
+     * @param expectedStatus expected status of ElastiCache cluster
+     * @throws Throwable the throwable
+     */
+    @Then(&quot;^assertElastiCache cluster status \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertElastiCacheClusterStatus(String expectedStatus) throws Throwable {
+
+<span class="nc" id="L121">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+<span class="nc bnc" id="L122" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L123">            throw new RuntimeException(&quot;Unable to reboot elastiCache cluster as no cluster information is available&quot;);</span>
+        }
+<span class="nc" id="L125">        org.testng.Assert.assertEquals(elastiCacheRaider.getElastiCacheClusterStatus(clusterName), expectedStatus);</span>
+<span class="nc" id="L126">    }</span>
+
+    /**
+     * Adds the provided number of nodes to the current ElastiCache cluster.
+     *
+     * @param numNodes number of nodes to add
+     * @return the elasti cache step definitions
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^add ElastiCache nodes (\\d+)$&quot;)
+    public ElastiCacheStepDefinitions addElastiCacheNodes(int numNodes) throws Throwable {
+
+<span class="nc" id="L138">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+<span class="nc bnc" id="L139" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L140">            throw new RuntimeException(&quot;Unable to reboot elastiCache cluster as no cluster information is available&quot;);</span>
+        }
+
+<span class="nc" id="L143">        elastiCacheRaider.addNodesToCluster(clusterName, numNodes);</span>
+<span class="nc" id="L144">        return this;</span>
+    }
+
+    /**
+     * Removes the provided number of nodes from the current ElastiCache cluster.
+     *
+     * @param numNodes number of nodes to remove
+     * @return the elasti cache step definitions
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^remove ElastiCache nodes (\\d+)$&quot;)
+    public ElastiCacheStepDefinitions removeElastiCacheNodes(int numNodes) throws Throwable {
+
+<span class="nc" id="L157">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+<span class="nc bnc" id="L158" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L159">            throw new RuntimeException(&quot;Unable to reboot elastiCache cluster as no cluster information is available&quot;);</span>
+        }
+
+<span class="nc" id="L162">        elastiCacheRaider.removeNodesFromCluster(clusterName, numNodes);</span>
+<span class="nc" id="L163">        return this;</span>
+    }
+
+    /**
+     * Detaches the provided subnet from the ElastiCache cluster.
+     *
+     * @param subnetId subnet id to detach
+     * @return the elasti cache step definitions
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^detach ElastiCache subnet \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public ElastiCacheStepDefinitions detachElastiCacheSubnet(String subnetId) throws Throwable {
+<span class="nc" id="L175">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+<span class="nc bnc" id="L176" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L177">            throw new RuntimeException(&quot;Unable to reboot elastiCache cluster as no cluster information is available&quot;);</span>
+        }
+
+<span class="nc" id="L180">        elastiCacheRaider.detachSubnet(clusterName, subnetId);</span>
+<span class="nc" id="L181">        return this;</span>
+
+    }
+
+    /**
+     * Attaches the provided subnet to the ElastiCache cluster.
+     *
+     * @param subnetId subnet id to atttach
+     * @return the elasti cache step definitions
+     * @throws Throwable the throwable
+     */
+    @Then(&quot;^attach ElastiCache subnet \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public ElastiCacheStepDefinitions attachElastiCacheSubnet(String subnetId) throws Throwable {
+<span class="nc" id="L194">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+<span class="nc bnc" id="L195" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L196">            throw new RuntimeException(&quot;Unable to reboot elastiCache cluster as no cluster information is available&quot;);</span>
+        }
+
+<span class="nc" id="L199">        elastiCacheRaider.attachSubnet(clusterName, subnetId);</span>
+<span class="nc" id="L200">        return this;</span>
+    }
+
+    /**
+     * Updates the old security group id with the new one for the ElastiCache cluster.
+     *
+     * @param secGroupFrom old security group id
+     * @param secGroupTo   new security group id
+     * @return the elasti cache step definitions
+     * @throws Throwable the throwable
+     */
+    @When(&quot;^change ElastiCache security group from \&quot;([^\&quot;]*)\&quot; to \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public ElastiCacheStepDefinitions changeElastiCacheSecurityGroup(String secGroupFrom, String secGroupTo) throws Throwable {
+        ;
+<span class="nc" id="L214">        String clusterName = executionStateCache.getElastiCacheClusterName();</span>
+
+<span class="nc bnc" id="L216" title="All 4 branches missed.">        if (clusterName == null || clusterName.isEmpty()) {</span>
+<span class="nc" id="L217">            throw new RuntimeException(&quot;Unable to detach security group on ElastiCache cluster, cluster in not available&quot;);</span>
+        }
+<span class="nc bnc" id="L219" title="All 4 branches missed.">        if (secGroupFrom == null || secGroupFrom.isEmpty()) {</span>
+<span class="nc" id="L220">            throw new RuntimeException(&quot;Unable to detach security group on ElastiCache instance, no security group available&quot;);</span>
+        }
+
+<span class="nc" id="L223">        elastiCacheRaider.changeSecurityGroupId(clusterName, secGroupFrom, secGroupTo);</span>
+
+<span class="nc" id="L225">        return this;</span>
+    }
+
+
+    /**
+     * Given elast cache node elasti cache step definitions.
+     *
+     * @param nodeName the node name
+     * @return the elasti cache step definitions
+     */
+    @Given(&quot;^ElastiCache node \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public ElastiCacheStepDefinitions givenElastCacheNode(String nodeName)
+    {
+<span class="nc" id="L238">        executionStateCache.setCacheNodes(elastiCacheRaider.getAllElastiCacheNodeNames());</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">        if (executionStateCache.getCacheNodes().contains(nodeName)) {</span>
+<span class="nc" id="L240">            executionStateCache.setCacheNodeName(nodeName);</span>
+        }
+        else {
+<span class="nc" id="L243">            throw new RuntimeException(&quot;Unable to set the elasticache name, no elasticache instances available&quot;);</span>
+        }
+<span class="nc" id="L245">        return this;</span>
+    }
+
+    /**
+     * Reboot elasti cache node elasti cache step definitions.
+     *
+     * @return the elasti cache step definitions
+     */
+    @When(&quot;^reboot ElastiCache node&quot;)
+    public ElastiCacheStepDefinitions rebootElastiCacheNode()
+    {
+
+
+<span class="nc" id="L258">        String cacheNodeName = executionStateCache.getCacheNodeName();</span>
+<span class="nc bnc" id="L259" title="All 4 branches missed.">        if (cacheNodeName == null  || cacheNodeName.isEmpty())</span>
+        {
+<span class="nc" id="L261">            throw new RuntimeException(&quot;Unable to reboot elasti cache cache node , no  instance available&quot;);</span>
+        }
+
+<span class="nc" id="L264">        logger.info(&quot;ElasitCache - rebooting cache node: &quot; + cacheNodeName );</span>
+<span class="nc" id="L265">        elastiCacheRaider.rebootElasticCacheNode(cacheNodeName);</span>
+<span class="nc" id="L266">        return this;</span>
+
+    }
+
+    /**
+     * Assert elasti cache node status.
+     *
+     * @param expectedStatus the expected status
+     */
+    @Then(&quot;^assertElastiCache node status \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertElastiCacheNodeStatus(String expectedStatus){
+<span class="nc" id="L277">        String cacheNodeName = executionStateCache.getCacheNodeName();</span>
+<span class="nc bnc" id="L278" title="All 4 branches missed.">        if (cacheNodeName == null  || cacheNodeName.isEmpty())</span>
+        {
+<span class="nc" id="L280">            throw new RuntimeException(&quot;Unable to reboot elasti cache cache node , no  instance available&quot;);</span>
+        }
+<span class="nc" id="L282">        org.testng.Assert.assertEquals(elastiCacheRaider.getElastiCacheNodeStatus(cacheNodeName), expectedStatus);</span>
+<span class="nc" id="L283">    }</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

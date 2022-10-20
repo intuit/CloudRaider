@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RDSRaiderImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.core.impl</a> &gt; <span class="el_source">RDSRaiderImpl.java</span></div><h1>RDSRaiderImpl.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.core.impl;
+
+import com.amazonaws.services.rds.model.*;
+import com.intuit.cloudraider.commons.RDSDelegator;
+import com.intuit.cloudraider.core.interfaces.RDSRaider;
+import com.intuit.cloudraider.exceptions.InvalidInputDataException;
+import com.intuit.cloudraider.model.DBStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
+/**
+ * AWS Relational Database Service functionality.
+ * &lt;p&gt;
+  */
+@Component(value=&quot;rdsRaiderBean&quot;)
+public class RDSRaiderImpl implements RDSRaider {
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L52">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private RDSDelegator rdsDelegator;
+
+    /**
+     * Instantiates a new Rds raider.
+     */
+<span class="nc" id="L60">    public RDSRaiderImpl(){</span>
+<span class="nc" id="L61">    }</span>
+
+    /**
+     * Get all database instances associated with the account.
+     *
+     * @return list of database instances
+     */
+    @Override
+    public List&lt;DBInstance&gt; getAllDbInstances() {
+<span class="nc" id="L70">        return rdsDelegator.getAmazonRds().describeDBInstances().getDBInstances();</span>
+    }
+
+    /**
+     * Get all database instances that are in the given availability zone and are not ignored.
+     *
+     * @param availabilityZone      availability zone id
+     * @param dbInstanceIdsToIgnore list of database ids
+     * @return list of database instances
+     */
+    @Override
+    public List&lt;DBInstance&gt; getInstanceIdsForAvailabilityZone(String availabilityZone, List&lt;String&gt; dbInstanceIdsToIgnore) {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (dbInstanceIdsToIgnore == null) throw new InvalidInputDataException(&quot;dbInstanceIdsToIgnore can not be null&quot;);</span>
+
+        //not using filters because they seem to cause errors : name = db-instance-id, and value = empty array list
+<span class="nc" id="L85">        List&lt;DBInstance&gt; dbInstances = rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest()).getDBInstances();</span>
+
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        for (Iterator&lt;DBInstance&gt; it = dbInstances.iterator(); it.hasNext(); ) {</span>
+<span class="nc" id="L88">            DBInstance dbInstance = it.next();</span>
+
+<span class="nc bnc" id="L90" title="All 2 branches missed.">            if (!dbInstance.getAvailabilityZone().contains(availabilityZone)) {</span>
+<span class="nc" id="L91">                it.remove();</span>
+            }
+<span class="nc bnc" id="L93" title="All 2 branches missed.">            if (dbInstanceIdsToIgnore.contains(dbInstance.getDBInstanceIdentifier())) {</span>
+<span class="nc" id="L94">                it.remove();</span>
+            }
+<span class="nc" id="L96">        }</span>
+
+<span class="nc" id="L98">        return dbInstances;</span>
+    }
+
+    /**
+     * Get the database statuses for the database instances requested.
+     *
+     * @param dbInstanceIds list of database ids
+     * @return list of database status, one status per database instance
+     */
+    @Override
+    public List&lt;DBStatus&gt; getInstancesStatus(List&lt;String&gt; dbInstanceIds) {
+<span class="nc" id="L109">        List&lt;DBInstance&gt; dbInstances = rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest()).getDBInstances();</span>
+<span class="nc" id="L110">        List&lt;DBStatus&gt; statuses = new ArrayList&lt;DBStatus&gt;();</span>
+
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        for (Iterator&lt;DBInstance&gt; it = dbInstances.iterator(); it.hasNext(); ) {</span>
+<span class="nc" id="L113">            DBInstance dbInstance = it.next();</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (dbInstanceIds.contains(dbInstance.getDBInstanceIdentifier())) {</span>
+<span class="nc" id="L115">                statuses.add(new DBStatus(dbInstance.getDBInstanceIdentifier(), dbInstance.getDBInstanceStatus()));</span>
+            }
+<span class="nc" id="L117">        }</span>
+<span class="nc" id="L118">        return statuses;</span>
+    }
+
+    /**
+     * Stop the database instances with the matching names.
+     *
+     * @param dbNames list of database names
+     */
+    @Override
+    public void stopInstances(List&lt;String&gt; dbNames) {
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (dbNames.isEmpty()) {</span>
+<span class="nc" id="L129">            throw new InvalidInputDataException(&quot;Empty dbNames list&quot;);</span>
+        }
+
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        for (String dbName : dbNames) {</span>
+<span class="nc" id="L133">            DBInstance dbInstance = rdsDelegator.getAmazonRds().stopDBInstance(</span>
+<span class="nc" id="L134">                    new StopDBInstanceRequest().withDBInstanceIdentifier(dbName));</span>
+
+<span class="nc bnc" id="L136" title="All 2 branches missed.">            if (dbInstance == null) {</span>
+<span class="nc" id="L137">                throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to stop DB instance: &quot; + dbName);</span>
+            }
+<span class="nc" id="L139">        }</span>
+<span class="nc" id="L140">    }</span>
+
+    /**
+     * Start the database instances with the matching names.
+     *
+     * @param dbNames list of database names
+     */
+    @Override
+    public void startInstances(List&lt;String&gt; dbNames) {
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (dbNames.isEmpty()) {</span>
+<span class="nc" id="L150">            throw new InvalidInputDataException(&quot;Empty dbNames list&quot;);</span>
+        }
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        for (String dbName : dbNames) {</span>
+<span class="nc" id="L154">            DBInstance dbInstance = rdsDelegator.getAmazonRds().startDBInstance(</span>
+<span class="nc" id="L155">                    new StartDBInstanceRequest().withDBInstanceIdentifier(dbName));</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (dbInstance == null) {</span>
+<span class="nc" id="L157">                throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to start DB instance: &quot; + dbName);</span>
+            }
+
+<span class="nc" id="L160">        }</span>
+<span class="nc" id="L161">    }</span>
+
+    /**
+     * Get all database instance names associated with the account.
+     *
+     * @return list of names
+     */
+    @Override
+    public List&lt;String&gt; getAllDbInstanceNames() {
+<span class="nc" id="L170">        List&lt;String&gt; dbInstanceNames = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L171">        List&lt;DBInstance&gt; dbInstances = rdsDelegator.getAmazonRds().describeDBInstances().getDBInstances();</span>
+<span class="nc" id="L172">        dbInstances.forEach(dbInstance -&gt; dbInstanceNames.add(dbInstance.getDBName()));</span>
+<span class="nc" id="L173">        return dbInstanceNames;</span>
+    }
+
+    /**
+     * Get the status of all database instances associated with the account.
+     *
+     * @return list of statuses
+     */
+    @Override
+    public List&lt;String&gt; getDBInstancesStatus() {
+<span class="nc" id="L183">        List&lt;DBInstance&gt; dbInstances = rdsDelegator.getAmazonRds().describeDBInstances().getDBInstances();</span>
+<span class="nc" id="L184">        List&lt;String&gt; statuses = new ArrayList&lt;String&gt;();</span>
+
+<span class="nc" id="L186">        dbInstances.forEach(dbInstance -&gt; statuses.add(dbInstance.getDBInstanceStatus()));</span>
+<span class="nc" id="L187">        return statuses;</span>
+    }
+
+    /**
+     * Get the status for the specified database.
+     *
+     * @param dbName database name
+     * @return database status
+     */
+    @Override
+    public String getDBInstanceStatus(String dbName) {
+<span class="nc" id="L198">        DescribeDBInstancesResult dbInstancesresult = rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName));</span>
+
+<span class="nc" id="L200">        return dbInstancesresult.getDBInstances().get(0).getDBInstanceStatus();</span>
+    }
+
+    /**
+     * Reboot the database instances that match the provided names.
+     *
+     * @param dbNames database names
+     */
+    @Override
+    public void rebootDbInstances(List&lt;String&gt; dbNames) {
+<span class="nc bnc" id="L210" title="All 2 branches missed.">        if (dbNames.isEmpty()) {</span>
+<span class="nc" id="L211">            throw new InvalidInputDataException(&quot;Empty dbNames list&quot;);</span>
+        }
+
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        for (String dbName : dbNames) {</span>
+<span class="nc" id="L215">            this.rebootDbInstance(dbName);</span>
+<span class="nc" id="L216">        }</span>
+<span class="nc" id="L217">    }</span>
+
+    /**
+     * Reboot the given database instance.
+     *
+     * @param dbName database name
+     */
+    @Override
+    public void rebootDbInstance(String dbName) {
+<span class="nc bnc" id="L226" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L227">            throw new InvalidInputDataException(&quot;Null/Empty db name&quot;);</span>
+        }
+<span class="nc" id="L229">        DBInstance dbInstance = rdsDelegator.getAmazonRds().rebootDBInstance(</span>
+<span class="nc" id="L230">                new RebootDBInstanceRequest().withDBInstanceIdentifier(dbName));</span>
+
+<span class="nc bnc" id="L232" title="All 2 branches missed.">        if (dbInstance == null) {</span>
+<span class="nc" id="L233">            throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to reboot DB instance: &quot; + dbName);</span>
+        }
+<span class="nc" id="L235">    }</span>
+
+    /**
+     * Reboot the given database instance with a forced failover.
+     *
+     * @param dbName database name
+     */
+    @Override
+    public void rebootDbInstanceWithForceFailover(String dbName) {
+<span class="nc bnc" id="L244" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L245">            throw new InvalidInputDataException(&quot;Null/Empty db name&quot;);</span>
+        }
+<span class="nc" id="L247">        DBInstance dbInstance = rdsDelegator.getAmazonRds().rebootDBInstance(</span>
+<span class="nc" id="L248">                new RebootDBInstanceRequest().withDBInstanceIdentifier(dbName).withForceFailover(true));</span>
+
+<span class="nc bnc" id="L250" title="All 2 branches missed.">        if (dbInstance == null) {</span>
+<span class="nc" id="L251">            throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to reboot DB instance: &quot; + dbName);</span>
+        }
+<span class="nc" id="L253">    }</span>
+
+    /**
+     * Duplicate function of detachSecurityGroups().
+     */
+    @Deprecated
+    public void detachSecurityGroup(String dbName, String securityGroup) {
+<span class="nc bnc" id="L260" title="All 4 branches missed.">        if (dbName.isEmpty() || dbName == null) {</span>
+<span class="nc" id="L261">            throw new InvalidInputDataException(&quot;Empty/Null dbName provided in request&quot;);</span>
+<span class="nc bnc" id="L262" title="All 4 branches missed.">        } else if (securityGroup.isEmpty() || securityGroup == null) {</span>
+<span class="nc" id="L263">            throw new InvalidInputDataException(&quot;Empty/Null securityGroup provided in request&quot;);</span>
+        }
+<span class="nc" id="L265">        List&lt;String&gt; securityGroups = this.getSecurityGroups(dbName);</span>
+
+<span class="nc bnc" id="L267" title="All 4 branches missed.">        if (securityGroups != null &amp;&amp; securityGroups.contains(securityGroup)) {</span>
+<span class="nc" id="L268">            securityGroups.remove(securityGroup);</span>
+<span class="nc" id="L269">            rdsDelegator.getAmazonRds().modifyDBInstance(new ModifyDBInstanceRequest().withDBInstanceIdentifier(dbName).withVpcSecurityGroupIds(securityGroups).withApplyImmediately(true));</span>
+        } else {
+<span class="nc" id="L271">            throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to detach SG: &quot; + securityGroup);</span>
+        }
+<span class="nc" id="L273">    }</span>
+
+    /**
+     * Duplicate function of attachSecurityGroups().
+     */
+    @Deprecated
+    public void attachSecurityGroup(String dbName, String securityGroup) {
+<span class="nc bnc" id="L280" title="All 4 branches missed.">        if (dbName.isEmpty() || dbName == null) {</span>
+<span class="nc" id="L281">            throw new InvalidInputDataException(&quot;Empty/Null dbName provided in request&quot;);</span>
+<span class="nc bnc" id="L282" title="All 4 branches missed.">        } else if (securityGroup.isEmpty() || securityGroup == null) {</span>
+<span class="nc" id="L283">            throw new InvalidInputDataException(&quot;Empty/Null securityGroup provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L286">        List&lt;String&gt; securityGroups = this.getSecurityGroups(dbName);</span>
+
+<span class="nc bnc" id="L288" title="All 4 branches missed.">        if (securityGroups != null &amp;&amp; !securityGroups.contains(securityGroup)) {</span>
+<span class="nc" id="L289">            securityGroups.add(securityGroup);</span>
+<span class="nc" id="L290">            rdsDelegator.getAmazonRds().modifyDBInstance(new ModifyDBInstanceRequest().withDBInstanceIdentifier(dbName).withVpcSecurityGroupIds(securityGroups).withApplyImmediately(true));</span>
+        }
+<span class="nc" id="L292">    }</span>
+
+    /**
+     * Get all security groups attached to the specified database instance.
+     *
+     * @param dbName database name
+     * @return list of security group ids
+     */
+    @Override
+    public List&lt;String&gt; getSecurityGroups(String dbName) {
+<span class="nc" id="L302">        List&lt;String&gt; secGroupIds = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L303">        List&lt;VpcSecurityGroupMembership&gt; securityGroupMemberships = rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName)).getDBInstances().get(0).getVpcSecurityGroups();</span>
+<span class="nc" id="L304">        securityGroupMemberships.forEach(securityGroupMembership -&gt; secGroupIds.add(securityGroupMembership.getVpcSecurityGroupId()));</span>
+<span class="nc" id="L305">        return secGroupIds;</span>
+    }
+
+    /**
+     * Get all subnets attached to the specified database instance.
+     *
+     * @param dbName database name
+     * @return list of subnet ids
+     */
+    @Override
+    public List&lt;String&gt; getSubnetIds(String dbName) {
+<span class="nc" id="L316">        List&lt;String&gt; subnetIds = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L317">        List&lt;Subnet&gt; subnets = rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName)).getDBInstances().get(0).getDBSubnetGroup().getSubnets();</span>
+<span class="nc" id="L318">        subnets.forEach(subnet -&gt; subnetIds.add(subnet.getSubnetIdentifier()));</span>
+<span class="nc" id="L319">        return subnetIds;</span>
+    }
+
+    /**
+     * Detach the given security group from the specified database.
+     *
+     * @param dbName database name
+     * @param securityGroups security group ids
+     */
+    @Override
+    public void detachSecurityGroups(String dbName, String... securityGroups) {
+<span class="nc bnc" id="L330" title="All 4 branches missed.">        if (dbName.isEmpty() || dbName == null) {</span>
+<span class="nc" id="L331">            throw new InvalidInputDataException(&quot;Empty/Null dbName provided in request&quot;);</span>
+<span class="nc bnc" id="L332" title="All 4 branches missed.">        } else if (securityGroups.length &lt;= 0 || securityGroups == null) {</span>
+<span class="nc" id="L333">            throw new InvalidInputDataException(&quot;Empty/Null securityGroups provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L336">        List&lt;String&gt; existingSecurityGroups = this.getSecurityGroups(dbName);</span>
+
+<span class="nc bnc" id="L338" title="All 4 branches missed.">        if (existingSecurityGroups != null &amp;&amp; existingSecurityGroups.containsAll(Arrays.asList(securityGroups))) {</span>
+<span class="nc" id="L339">            existingSecurityGroups.removeAll(Arrays.asList(securityGroups));</span>
+<span class="nc" id="L340">            rdsDelegator.getAmazonRds().modifyDBInstance(new ModifyDBInstanceRequest().withDBInstanceIdentifier(dbName).withVpcSecurityGroupIds(existingSecurityGroups));</span>
+        } else {
+<span class="nc" id="L342">            throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to detach SecurityGroups: &quot; + securityGroups);</span>
+        }
+<span class="nc" id="L344">    }</span>
+
+    /**
+     * Attach the given security group to the specified database.
+     *
+     * @param dbName database name
+     * @param securityGroups security group ids
+     */
+    @Override
+    public void attachSecurityGroups(String dbName, String... securityGroups) {
+<span class="nc bnc" id="L354" title="All 4 branches missed.">        if (dbName.isEmpty() || dbName == null) {</span>
+<span class="nc" id="L355">            throw new InvalidInputDataException(&quot;Empty/Null dbName provided in request&quot;);</span>
+<span class="nc bnc" id="L356" title="All 4 branches missed.">        } else if (securityGroups.length &lt;= 0 || securityGroups == null) {</span>
+<span class="nc" id="L357">            throw new InvalidInputDataException(&quot;Empty/Null securityGroups provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L360">        List&lt;String&gt; existingSecurityGroups = this.getSecurityGroups(dbName);</span>
+
+<span class="nc bnc" id="L362" title="All 4 branches missed.">        if (existingSecurityGroups != null &amp;&amp; !existingSecurityGroups.containsAll(Arrays.asList(securityGroups))) {</span>
+<span class="nc" id="L363">            existingSecurityGroups.addAll(Arrays.asList(securityGroups));</span>
+<span class="nc" id="L364">            rdsDelegator.getAmazonRds().modifyDBInstance(new ModifyDBInstanceRequest().withDBInstanceIdentifier(dbName).withVpcSecurityGroupIds(existingSecurityGroups));</span>
+        }
+<span class="nc" id="L366">    }</span>
+
+    /**
+     * Detach the given subnet from the specified database.
+     *
+     * @param dbName database name
+     * @param subnetId subnet id
+     */
+    @Override
+    public void detachSubnet(String dbName, String subnetId) {
+<span class="nc bnc" id="L376" title="All 4 branches missed.">        if (dbName.isEmpty() || dbName == null) {</span>
+<span class="nc" id="L377">            throw new InvalidInputDataException(&quot;Empty/Null dbName provided in request&quot;);</span>
+<span class="nc bnc" id="L378" title="All 4 branches missed.">        } else if (subnetId.isEmpty() || subnetId == null) {</span>
+<span class="nc" id="L379">            throw new InvalidInputDataException(&quot;Empty/Null subnetId provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L382">        List&lt;String&gt; subnetIds = this.getSubnetIds(dbName);</span>
+
+<span class="nc bnc" id="L384" title="All 4 branches missed.">        if (subnetIds != null &amp;&amp; subnetIds.contains(subnetId)) {</span>
+<span class="nc" id="L385">            subnetIds.remove(subnetId);</span>
+
+<span class="nc" id="L387">            ModifyDBSubnetGroupRequest modifyDBSubnetGroupRequest = new ModifyDBSubnetGroupRequest()</span>
+<span class="nc" id="L388">                    .withSubnetIds(subnetIds)</span>
+<span class="nc" id="L389">                    .withDBSubnetGroupName(getSubnetGroupName(dbName));</span>
+<span class="nc" id="L390">            rdsDelegator.getAmazonRds().modifyDBSubnetGroup(modifyDBSubnetGroupRequest);</span>
+<span class="nc" id="L391">        } else {</span>
+<span class="nc" id="L392">            throw new com.intuit.cloudraider.exceptions.ResourceNotFoundException(&quot;Unable to detach Subnet: &quot; + subnetId);</span>
+        }
+<span class="nc" id="L394">    }</span>
+
+    /**
+     * Attach the given subnet to the specified database.
+     *
+     * @param dbName database name
+     * @param subnetId subnet id
+     */
+    @Override
+    public void attachSubnet(String dbName, String subnetId) {
+<span class="nc bnc" id="L404" title="All 4 branches missed.">        if (dbName.isEmpty() || dbName == null) {</span>
+<span class="nc" id="L405">            throw new InvalidInputDataException(&quot;Empty/Null dbName provided in request&quot;);</span>
+<span class="nc bnc" id="L406" title="All 4 branches missed.">        } else if (subnetId.isEmpty() || subnetId == null) {</span>
+<span class="nc" id="L407">            throw new InvalidInputDataException(&quot;Empty/Null subnetId provided in request&quot;);</span>
+        }
+
+<span class="nc" id="L410">        List&lt;String&gt; subnetIds = this.getSubnetIds(dbName);</span>
+
+<span class="nc bnc" id="L412" title="All 4 branches missed.">        if (subnetIds != null &amp;&amp; !subnetIds.contains(subnetId)) {</span>
+<span class="nc" id="L413">            subnetIds.add(subnetId);</span>
+<span class="nc" id="L414">            ModifyDBSubnetGroupRequest modifyDBSubnetGroupRequest = new ModifyDBSubnetGroupRequest()</span>
+<span class="nc" id="L415">                    .withSubnetIds(subnetIds)</span>
+<span class="nc" id="L416">                    .withDBSubnetGroupName(getSubnetGroupName(dbName));</span>
+<span class="nc" id="L417">            rdsDelegator.getAmazonRds().modifyDBSubnetGroup(modifyDBSubnetGroupRequest);</span>
+        }
+<span class="nc" id="L419">    }</span>
+
+    /**
+     * Restore the given snapshot onto the specified database instance.
+     *
+     * @param dbName database name
+     * @param snapshotId snapshot id
+     */
+    @Override
+    public void restoreDBInstanceFromSnapshot(String dbName, String snapshotId) {
+<span class="nc" id="L429">        RestoreDBInstanceFromDBSnapshotRequest restoreDBInstanceFromDBSnapshotRequest = new RestoreDBInstanceFromDBSnapshotRequest()</span>
+<span class="nc" id="L430">                .withDBInstanceIdentifier(dbName)</span>
+<span class="nc" id="L431">                .withDBSnapshotIdentifier(snapshotId)</span>
+<span class="nc" id="L432">                .withDBSubnetGroupName(getSubnetGroupName(dbName));</span>
+        try {
+<span class="nc" id="L434">            rdsDelegator.getAmazonRds().restoreDBInstanceFromDBSnapshot(restoreDBInstanceFromDBSnapshotRequest);</span>
+<span class="nc" id="L435">        } catch (Exception ex) {</span>
+<span class="nc" id="L436">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L437">        }</span>
+<span class="nc" id="L438">    }</span>
+
+    /**
+     * Update the specified database instance with the new storage size.
+     *
+     * @param dbName database name
+     * @param newSize new storage size
+     */
+    @Override
+    public void modifyDbStorageSize(String dbName, int newSize) {
+<span class="nc" id="L448">        ModifyDBInstanceRequest modifyDBInstanceRequest = new ModifyDBInstanceRequest()</span>
+<span class="nc" id="L449">                .withDBInstanceIdentifier(dbName)</span>
+<span class="nc" id="L450">                .withApplyImmediately(true)</span>
+<span class="nc" id="L451">                .withAllocatedStorage(newSize);</span>
+        try {
+<span class="nc" id="L453">            rdsDelegator.getAmazonRds().modifyDBInstance(modifyDBInstanceRequest);</span>
+<span class="nc" id="L454">        } catch (Exception ex) {</span>
+<span class="nc" id="L455">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L456">        }</span>
+<span class="nc" id="L457">    }</span>
+
+    /**
+     * Modify the specified database instance with the new instance class.
+     *
+     * @param dbName database name
+     * @param dbInstanceClass database instance class
+     */
+    @Override
+    public void modifyDbInstanceClass(String dbName, String dbInstanceClass) {
+<span class="nc" id="L467">        ModifyDBInstanceRequest modifyDBInstanceRequest = new ModifyDBInstanceRequest()</span>
+<span class="nc" id="L468">                .withDBInstanceIdentifier(dbName)</span>
+<span class="nc" id="L469">                .withApplyImmediately(true)</span>
+<span class="nc" id="L470">                .withDBInstanceClass(dbInstanceClass);</span>
+        try {
+<span class="nc" id="L472">            rdsDelegator.getAmazonRds().modifyDBInstance(modifyDBInstanceRequest);</span>
+
+<span class="nc" id="L474">        } catch (Exception ex) {</span>
+<span class="nc" id="L475">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L476">        }</span>
+<span class="nc" id="L477">    }</span>
+
+    /**
+     * Modify the specified database instance with the new iops value.
+     *
+     * @param dbName database name
+     * @param iops new input/output operations per second
+     */
+    @Override
+    public void modifyDbIops(String dbName, Integer iops) {
+<span class="nc" id="L487">        ModifyDBInstanceRequest modifyDBInstanceRequest = new ModifyDBInstanceRequest()</span>
+<span class="nc" id="L488">                .withDBInstanceIdentifier(dbName)</span>
+<span class="nc" id="L489">                .withApplyImmediately(true)</span>
+<span class="nc" id="L490">                .withIops(iops);</span>
+        try {
+<span class="nc" id="L492">            rdsDelegator.getAmazonRds().modifyDBInstance(modifyDBInstanceRequest);</span>
+<span class="nc" id="L493">        } catch (Exception ex) {</span>
+<span class="nc" id="L494">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L495">        }</span>
+<span class="nc" id="L496">    }</span>
+
+    /**
+     * Get the specified database instance's class.
+     *
+     * @param dbName database instance
+     * @return database instance class
+     */
+    @Override
+    public String getDBInstanceClass(String dbName) {
+<span class="nc" id="L506">        return rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName))</span>
+<span class="nc" id="L507">                .getDBInstances()</span>
+<span class="nc" id="L508">                .get(0)</span>
+<span class="nc" id="L509">                .getDBInstanceClass();</span>
+    }
+
+    /**
+     * Get the specified database instance's storage size.
+     *
+     * @param dbName database instance
+     * @return database instance storage size
+     */
+    @Override
+    public Integer getDBStorageSize(String dbName) {
+<span class="nc" id="L520">        return rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName))</span>
+<span class="nc" id="L521">                .getDBInstances()</span>
+<span class="nc" id="L522">                .get(0)</span>
+<span class="nc" id="L523">                .getAllocatedStorage();</span>
+    }
+
+    /**
+     * Get the specified database instance's iops value.
+     *
+     * @param dbName database instance
+     * @return database instance iops
+     */
+    @Override
+    public Integer getIops(String dbName) {
+<span class="nc" id="L534">        return rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName))</span>
+<span class="nc" id="L535">                .getDBInstances()</span>
+<span class="nc" id="L536">                .get(0)</span>
+<span class="nc" id="L537">                .getIops();</span>
+    }
+
+    /**
+     * Generate a snapshot with the given name for the specified database instance.
+     *
+     * @param dbName database instance
+     * @param snapshotName new snapshot name
+     */
+    @Override
+    public void generateSnapshot(String dbName, String snapshotName) {
+<span class="nc" id="L548">        CreateDBSnapshotRequest createDBSnapshotRequest = new CreateDBSnapshotRequest()</span>
+<span class="nc" id="L549">                .withDBInstanceIdentifier(dbName)</span>
+<span class="nc" id="L550">                .withDBSnapshotIdentifier(snapshotName);</span>
+
+        try {
+<span class="nc" id="L553">            rdsDelegator.getAmazonRds().createDBSnapshot(createDBSnapshotRequest);</span>
+<span class="nc" id="L554">        } catch (Exception ex) {</span>
+<span class="nc" id="L555">            throw new RuntimeException(ex.getMessage());</span>
+<span class="nc" id="L556">        }</span>
+<span class="nc" id="L557">    }</span>
+
+    /**
+     * Gets the subnet group for the specified database instance.
+     *
+     * @param dbName database name
+     * @return subnet group name
+     */
+    private String getSubnetGroupName(String dbName) {
+<span class="nc" id="L566">        return rdsDelegator.getAmazonRds().describeDBInstances(new DescribeDBInstancesRequest().withDBInstanceIdentifier(dbName))</span>
+<span class="nc" id="L567">                .getDBInstances()</span>
+<span class="nc" id="L568">                .get(0)</span>
+<span class="nc" id="L569">                .getDBSubnetGroup()</span>
+<span class="nc" id="L570">                .getDBSubnetGroupName();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

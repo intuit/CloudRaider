@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Command.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.model</a> &gt; <span class="el_source">Command.java</span></div><h1>Command.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.model;
+
+/**
+ * Possible actions that can be run through AWS SSM on a particular EC2 instance.
+ */
+<span class="nc" id="L30">public enum Command {</span>
+
+    /**
+     * Spikecpu command.
+     */
+<span class="nc" id="L35">    SPIKECPU(&quot;spikecpuCommand&quot;),</span>
+
+    /**
+     * Corruptnetwork command.
+     */
+<span class="nc" id="L40">    CORRUPTNETWORK(&quot;networkcorruptionCommand&quot;),</span>
+    /**
+     * Delaynetwork command.
+     */
+<span class="nc" id="L44">    DELAYNETWORK(&quot;networklatencyCommand&quot;),</span>
+    /**
+     * Packetloss command.
+     */
+<span class="nc" id="L48">    PACKETLOSS(&quot;networkpacketlossCommand&quot;),</span>
+    /**
+     * Killprocess command.
+     */
+<span class="nc" id="L52">    KILLPROCESS(&quot;killCommand&quot;),</span>
+    /**
+     * Diskfull command.
+     */
+<span class="nc" id="L56">    DISKFULL(&quot;diskfullCommand&quot;),</span>
+    /**
+     * Ramdiskfull command.
+     */
+<span class="nc" id="L60">    RAMDISKFULL(&quot;ramdiskfullCommand&quot;),</span>
+    /**
+     * Stopservice command.
+     */
+<span class="nc" id="L64">    STOPSERVICE(&quot;stopserviceCommand&quot;),</span>
+    /**
+     * Startservice command.
+     */
+<span class="nc" id="L68">    STARTSERVICE(&quot;startserviceCommand&quot;),</span>
+    /**
+     * Blockdomain command.
+     */
+<span class="nc" id="L72">    BLOCKDOMAIN(&quot;blockdomainCommand&quot;),</span>
+    /**
+     * Unblockdomain command.
+     */
+<span class="nc" id="L76">    UNBLOCKDOMAIN(&quot;unblockdomainCommand&quot;),</span>
+    /**
+     * Blockdynamodb command.
+     */
+<span class="nc" id="L80">    BLOCKDYNAMODB(&quot;blockDynamodbCommand&quot;),</span>
+    /**
+     * Blockport command.
+     */
+<span class="nc" id="L84">    BLOCKPORT(&quot;blockportCommand&quot;),</span>
+    /**
+     * Blockoutboundport command.
+     */
+<span class="nc" id="L88">    BLOCKOUTBOUNDPORT(&quot;blockoutboundportCommand&quot;),</span>
+    /**
+     * Unblockport command.
+     */
+<span class="nc" id="L92">    UNBLOCKPORT(&quot;unblockportCommand&quot;),</span>
+    /**
+     * Unblockdynamodb command.
+     */
+<span class="nc" id="L96">    UNBLOCKDYNAMODB(&quot;unblockDynamodbCommand&quot;),</span>
+    /**
+     * Renamefile command.
+     */
+<span class="nc" id="L100">    RENAMEFILE(&quot;renamefileCommand&quot;),</span>
+    /**
+     * Blocks 3 command.
+     */
+<span class="nc" id="L104">    BLOCKS3(&quot;blockS3Command&quot;),</span>
+    /**
+     * Unblocks 3 command.
+     */
+<span class="nc" id="L108">    UNBLOCKS3(&quot;unblockS3Command&quot;);</span>
+
+
+    private final String commandString;
+
+<span class="nc" id="L113">    private Command(String commandString) {</span>
+<span class="nc" id="L114">        this.commandString = commandString;</span>
+<span class="nc" id="L115">    }</span>
+
+    /**
+     * Gets command name.
+     *
+     * @return the command name
+     */
+    public String getCommandName() {
+<span class="nc" id="L123">        return this.commandString;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

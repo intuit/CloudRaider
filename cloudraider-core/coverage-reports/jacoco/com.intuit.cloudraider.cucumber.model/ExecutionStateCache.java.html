@@ -1,0 +1,948 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExecutionStateCache.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.model</a> &gt; <span class="el_source">ExecutionStateCache.java</span></div><h1>ExecutionStateCache.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.model;
+
+import com.amazonaws.services.ec2.model.Tag;
+import com.intuit.cloudraider.model.EC2InstanceTO;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
+
+
+/**
+ * Cache that keeps track of state during the execution of cucumber features/scenarios.
+ * One important feature to note: each execution of getInstances() is randomized -- different order is returned
+ */
+@Component
+public class ExecutionStateCache {
+
+    private List&lt;EC2InstanceTO&gt; instances;
+    private List&lt;EC2InstanceTO&gt; unhealthyInstances;
+    private List&lt;EC2InstanceTO&gt; stoppedInstances;
+    private List&lt;EC2InstanceTO&gt; ssmCommandInvocationInstances;
+    private List&lt;EC2InstanceTO&gt; deregisteredInstances;
+    private List&lt;String&gt; blockedDomains;
+    private List&lt;String&gt; detachedSubnets;
+    private List&lt;String&gt; detachedSecurityGroups;
+    private String ec2Tag;
+    private String loadBalancerName;
+    private List&lt;String&gt; processNames;
+    private boolean healProcess;
+    private boolean healNetwork;
+    private boolean cpuSpiked;
+
+    private int lastJenkinsPerfBuildNumber;
+    private int healthyHostCount;
+
+
+    private boolean ramDiskFull;
+    private boolean blockPort;
+    private List&lt;Integer&gt; portNums;
+    private boolean blockDynamoDB;
+
+    private boolean blockS3;
+    private int portNum;
+    private String dbName;
+
+
+    private String cacheNodeName;
+    private String commandId;
+    private String elastiCacheClusterName;
+    private List&lt;String&gt; dbInstances;
+
+
+    private List&lt;String&gt; cacheNodes;
+
+
+    private String dynamoDBTable;
+    private long dynamoReadCapacity;
+    private long dynamoWriteCapacity;
+
+
+    private List&lt;Tag&gt; compulsoryTags;
+    private List&lt;Tag&gt; ignoreTags;
+    private String[] availaibilityzones;
+
+    /**
+     * Instantiates a new Execution state cache.
+     */
+<span class="nc" id="L93">    public ExecutionStateCache() {</span>
+
+
+<span class="nc" id="L96">        instances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L97">        unhealthyInstances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L98">        detachedSubnets = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L99">        blockedDomains = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L100">        deregisteredInstances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L101">        stoppedInstances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L102">        dbInstances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L103">        cacheNodes = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L104">        detachedSecurityGroups = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L105">        ssmCommandInvocationInstances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L106">        portNums = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L108">        processNames = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L109">        instances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L110">        unhealthyInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L111">        detachedSubnets = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L112">        blockedDomains = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L113">        dbInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L114">        detachedSecurityGroups = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L115">        ssmCommandInvocationInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L116">        deregisteredInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L118">    }</span>
+
+
+    /**
+     * Gets cache nodes.
+     *
+     * @return the cache nodes
+     */
+    public List&lt;String&gt; getCacheNodes() {
+<span class="nc" id="L127">        return cacheNodes;</span>
+    }
+
+    /**
+     * Sets cache nodes.
+     *
+     * @param cacheNodes the cache nodes
+     */
+    public void setCacheNodes(List&lt;String&gt; cacheNodes) {
+<span class="nc" id="L136">        this.cacheNodes = cacheNodes;</span>
+<span class="nc" id="L137">    }</span>
+
+    /**
+     * Gets cache node name.
+     *
+     * @return the cache node name
+     */
+    public String getCacheNodeName() {
+<span class="nc" id="L145">        return cacheNodeName;</span>
+    }
+
+    /**
+     * Sets cache node name.
+     *
+     * @param cacheNodeName the cache node name
+     */
+    public void setCacheNodeName(String cacheNodeName) {
+<span class="nc" id="L154">        this.cacheNodeName = cacheNodeName;</span>
+<span class="nc" id="L155">    }</span>
+
+    /**
+     * Find ec 2 instance given id ec 2 instance to.
+     *
+     * @param instanceID the instance id
+     * @return the ec 2 instance to
+     */
+    public EC2InstanceTO findEC2InstanceGivenID(String instanceID) {
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        for (EC2InstanceTO inst : instances) {</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (inst.getInstanceId().equalsIgnoreCase(instanceID)) {</span>
+<span class="nc" id="L166">                return inst;</span>
+            }
+<span class="nc" id="L168">        }</span>
+<span class="nc" id="L169">        return null;</span>
+    }
+
+    /**
+     * Gets instances.
+     *
+     * @return the instances
+     */
+    public List&lt;EC2InstanceTO&gt; getInstances() {
+<span class="nc" id="L178">        Collections.shuffle(instances);</span>
+<span class="nc" id="L179">        return instances;</span>
+    }
+
+    /**
+     * Sets instances.
+     *
+     * @param instances the instances
+     */
+    public void setInstances(List&lt;EC2InstanceTO&gt; instances) {
+<span class="nc" id="L188">        this.instances = instances;</span>
+<span class="nc" id="L189">    }</span>
+
+    /**
+     * Clear instances.
+     */
+    public void clearInstances() {
+<span class="nc" id="L195">        instances.clear();</span>
+<span class="nc" id="L196">    }</span>
+
+    /**
+     * Add instances.
+     *
+     * @param instancesList the instances list
+     */
+    public void addInstances(List&lt;EC2InstanceTO&gt; instancesList) {
+<span class="nc" id="L204">        instances.addAll(instancesList);</span>
+<span class="nc" id="L205">        instances = instances.stream().distinct().collect(Collectors.toList());</span>
+
+<span class="nc" id="L207">    }</span>
+
+    /**
+     * Gets stopped instances.
+     *
+     * @return the stopped instances
+     */
+    public List&lt;EC2InstanceTO&gt; getStoppedInstances() {
+<span class="nc" id="L215">        return stoppedInstances;</span>
+    }
+
+    /**
+     * Sets stopped instances.
+     *
+     * @param stoppedInstances the stopped instances
+     */
+    public void setStoppedInstances(List&lt;EC2InstanceTO&gt; stoppedInstances) {
+<span class="nc" id="L224">        this.stoppedInstances = stoppedInstances;</span>
+<span class="nc" id="L225">    }</span>
+
+    /**
+     * Gets db instances.
+     *
+     * @return the db instances
+     */
+    public List&lt;String&gt; getDBInstances() {
+<span class="nc" id="L233">        Collections.shuffle(dbInstances);</span>
+<span class="nc" id="L234">        return dbInstances;</span>
+    }
+
+    /**
+     * Sets db instances.
+     *
+     * @param dbInstances the db instances
+     */
+    public void setDBInstances(List&lt;String&gt; dbInstances) {
+<span class="nc" id="L243">        this.dbInstances = dbInstances;</span>
+<span class="nc" id="L244">    }</span>
+
+    /**
+     * Add db instances.
+     *
+     * @param dbInstancesList the db instances list
+     */
+    public void addDBInstances(List&lt;String&gt; dbInstancesList) {
+<span class="nc" id="L252">        dbInstances.addAll(dbInstancesList);</span>
+<span class="nc" id="L253">        dbInstances = dbInstances.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L254">    }</span>
+
+    /**
+     * Add deregistered instance.
+     *
+     * @param deregistered the deregistered
+     */
+    public void addDeregisteredInstance(EC2InstanceTO deregistered) {
+<span class="nc" id="L262">        deregisteredInstances.add(deregistered);</span>
+<span class="nc" id="L263">        deregisteredInstances = deregisteredInstances.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L264">    }</span>
+
+    /**
+     * Add deregistered instance.
+     *
+     * @param deregistered the deregistered
+     */
+    public void addDeregisteredInstance(List&lt;EC2InstanceTO&gt; deregistered) {
+<span class="nc" id="L272">        deregisteredInstances.addAll(deregistered);</span>
+<span class="nc" id="L273">        deregisteredInstances = deregisteredInstances.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L274">    }</span>
+
+    /**
+     * Clear deregistered instance.
+     */
+    public void clearDeregisteredInstance() {
+<span class="nc" id="L280">        deregisteredInstances.clear();</span>
+<span class="nc" id="L281">    }</span>
+
+    /**
+     * Gets deregisted instance.
+     *
+     * @return the deregisted instance
+     */
+    public List&lt;EC2InstanceTO&gt; getDeregistedInstance() {
+<span class="nc" id="L289">        return deregisteredInstances;</span>
+    }
+
+    /**
+     * Gets db name.
+     *
+     * @return the db name
+     */
+    public String getDbName() {
+<span class="nc" id="L298">        return dbName;</span>
+    }
+
+    /**
+     * Sets db name.
+     *
+     * @param dbName the db name
+     */
+    public void setDbName(String dbName) {
+<span class="nc" id="L307">        this.dbName = dbName;</span>
+<span class="nc" id="L308">    }</span>
+
+    /**
+     * Add un healthy instance.
+     *
+     * @param ec2InstanceTO the ec 2 instance to
+     */
+    public void addUnHealthyInstance(EC2InstanceTO ec2InstanceTO) {
+<span class="nc" id="L316">        unhealthyInstances.add(ec2InstanceTO);</span>
+<span class="nc" id="L317">        unhealthyInstances = unhealthyInstances.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L318">    }</span>
+
+    /**
+     * Add un healthy instances.
+     *
+     * @param ec2InstanceTOList the ec 2 instance to list
+     */
+    public void addUnHealthyInstances(List&lt;EC2InstanceTO&gt; ec2InstanceTOList) {
+<span class="nc" id="L326">        unhealthyInstances.addAll(ec2InstanceTOList);</span>
+<span class="nc" id="L327">        unhealthyInstances = unhealthyInstances.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L328">    }</span>
+
+    /**
+     * Add detached subnet.
+     *
+     * @param subnet the subnet
+     */
+    public void addDetachedSubnet(String subnet) {
+<span class="nc" id="L336">        detachedSubnets.add(subnet);</span>
+<span class="nc" id="L337">        detachedSubnets = detachedSubnets.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L338">    }</span>
+
+    /**
+     * Remove detached subnet.
+     *
+     * @param subnet the subnet
+     */
+    public void removeDetachedSubnet(String subnet) {
+<span class="nc" id="L346">        detachedSubnets.remove(subnet);</span>
+<span class="nc" id="L347">    }</span>
+
+    /**
+     * Remove detached subnets.
+     *
+     * @param subnets the subnets
+     */
+    public void removeDetachedSubnets(List&lt;String&gt; subnets) {
+<span class="nc" id="L355">        detachedSubnets.removeAll(subnets);</span>
+<span class="nc" id="L356">    }</span>
+
+    /**
+     * Gets detached subnets.
+     *
+     * @return the detached subnets
+     */
+    public List&lt;String&gt; getDetachedSubnets() {
+<span class="nc" id="L364">        return detachedSubnets;</span>
+    }
+
+    /**
+     * Add detached security group.
+     *
+     * @param group the group
+     */
+    public void addDetachedSecurityGroup(String group) {
+<span class="nc" id="L373">        detachedSecurityGroups.add(group);</span>
+<span class="nc" id="L374">        detachedSecurityGroups = detachedSecurityGroups.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L375">    }</span>
+
+    /**
+     * Remove detached security group.
+     *
+     * @param group the group
+     */
+    public void removeDetachedSecurityGroup(String group) {
+<span class="nc" id="L383">        detachedSecurityGroups.remove(group);</span>
+<span class="nc" id="L384">    }</span>
+
+    /**
+     * Remove detached security groups.
+     *
+     * @param groups the groups
+     */
+    public void removeDetachedSecurityGroups(List&lt;String&gt; groups) {
+<span class="nc" id="L392">        detachedSecurityGroups.removeAll(groups);</span>
+<span class="nc" id="L393">    }</span>
+
+    /**
+     * Gets detached security groups.
+     *
+     * @return the detached security groups
+     */
+    public List&lt;String&gt; getDetachedSecurityGroups() {
+<span class="nc" id="L401">        return detachedSecurityGroups;</span>
+    }
+
+    /**
+     * Gets unhealthy instances.
+     *
+     * @return the unhealthy instances
+     */
+    public List&lt;EC2InstanceTO&gt; getUnhealthyInstances() {
+<span class="nc" id="L410">        return unhealthyInstances;</span>
+    }
+
+    /**
+     * Sets unhealthy instances.
+     *
+     * @param unhealthyInstances the unhealthy instances
+     */
+    public void setUnhealthyInstances(List&lt;EC2InstanceTO&gt; unhealthyInstances) {
+<span class="nc" id="L419">        this.unhealthyInstances = unhealthyInstances;</span>
+<span class="nc" id="L420">    }</span>
+
+    /**
+     * Gets ec 2 tag.
+     *
+     * @return the ec 2 tag
+     */
+    public String getEc2Tag() {
+<span class="nc" id="L428">        return ec2Tag;</span>
+    }
+
+    /**
+     * Sets ec 2 tag.
+     *
+     * @param ec2Tag the ec 2 tag
+     */
+    public void setEc2Tag(String ec2Tag) {
+<span class="nc" id="L437">        this.ec2Tag = ec2Tag;</span>
+<span class="nc" id="L438">    }</span>
+
+    /**
+     * Gets process names.
+     *
+     * @return the process names
+     */
+    public List&lt;String&gt; getProcessNames() {
+<span class="nc" id="L446">        return processNames;</span>
+    }
+
+    /**
+     * Add process name.
+     *
+     * @param processName the process name
+     */
+    public void addProcessName(String processName) {
+<span class="nc" id="L455">        processNames.add(processName);</span>
+<span class="nc" id="L456">        processNames = processNames.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L457">    }</span>
+
+    /**
+     * Clear process names.
+     */
+    public void clearProcessNames() {
+<span class="nc" id="L463">        processNames.clear();</span>
+<span class="nc" id="L464">    }</span>
+
+    /**
+     * Is heal process boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isHealProcess() {
+<span class="nc" id="L472">        return healProcess;</span>
+    }
+
+    /**
+     * Sets heal process.
+     *
+     * @param healProcess the heal process
+     */
+    public void setHealProcess(boolean healProcess) {
+<span class="nc" id="L481">        this.healProcess = healProcess;</span>
+<span class="nc" id="L482">    }</span>
+
+    /**
+     * Is heal network boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isHealNetwork() {
+<span class="nc" id="L490">        return healNetwork;</span>
+    }
+
+    /**
+     * Sets heal network.
+     *
+     * @param healNetwork the heal network
+     */
+    public void setHealNetwork(boolean healNetwork) {
+<span class="nc" id="L499">        this.healNetwork = healNetwork;</span>
+<span class="nc" id="L500">    }</span>
+
+    /**
+     * Gets load balancer name.
+     *
+     * @return the load balancer name
+     */
+    public String getLoadBalancerName() {
+<span class="nc" id="L508">        return loadBalancerName;</span>
+    }
+
+    /**
+     * Sets load balancer name.
+     *
+     * @param loadBalancerName the load balancer name
+     */
+    public void setLoadBalancerName(String loadBalancerName) {
+<span class="nc" id="L517">        this.loadBalancerName = loadBalancerName;</span>
+<span class="nc" id="L518">    }</span>
+
+    /**
+     * Gets blocked domains.
+     *
+     * @return the blocked domains
+     */
+    public List&lt;String&gt; getBlockedDomains() {
+<span class="nc" id="L526">        return blockedDomains;</span>
+    }
+
+    /**
+     * Sets blocked domains.
+     *
+     * @param blockedDomains the blocked domains
+     */
+    public void setBlockedDomains(List&lt;String&gt; blockedDomains) {
+<span class="nc" id="L535">        this.blockedDomains = blockedDomains;</span>
+<span class="nc" id="L536">    }</span>
+
+    /**
+     * Is cpu spiked boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isCpuSpiked() {
+<span class="nc" id="L544">        return cpuSpiked;</span>
+    }
+
+    /**
+     * Sets cpu spiked.
+     *
+     * @param cpuSpiked the cpu spiked
+     */
+    public void setCpuSpiked(boolean cpuSpiked) {
+<span class="nc" id="L553">        this.cpuSpiked = cpuSpiked;</span>
+<span class="nc" id="L554">    }</span>
+
+    /**
+     * Gets elasti cache cluster name.
+     *
+     * @return the elasti cache cluster name
+     */
+    public String getElastiCacheClusterName() {
+<span class="nc" id="L562">        return elastiCacheClusterName;</span>
+    }
+
+    /**
+     * Sets elasti cache cluster name.
+     *
+     * @param elastiCacheClusterName the elasti cache cluster name
+     */
+    public void setElastiCacheClusterName(String elastiCacheClusterName) {
+<span class="nc" id="L571">        this.elastiCacheClusterName = elastiCacheClusterName;</span>
+<span class="nc" id="L572">    }</span>
+
+    /**
+     * Gets ssm command invocation instances.
+     *
+     * @return the ssm command invocation instances
+     */
+    public List&lt;EC2InstanceTO&gt; getSsmCommandInvocationInstances() {
+<span class="nc" id="L580">        return ssmCommandInvocationInstances;</span>
+    }
+
+    /**
+     * Sets ssm command invocation instances.
+     *
+     * @param ssmCommandInvocationInstances the ssm command invocation instances
+     */
+    public void setSsmCommandInvocationInstances(List&lt;EC2InstanceTO&gt; ssmCommandInvocationInstances) {
+<span class="nc" id="L589">        this.ssmCommandInvocationInstances = ssmCommandInvocationInstances;</span>
+<span class="nc" id="L590">    }</span>
+
+    /**
+     * Add ssm command invocation instances.
+     *
+     * @param instance the instance
+     */
+    public void addSsmCommandInvocationInstances(EC2InstanceTO instance) {
+<span class="nc" id="L598">        ssmCommandInvocationInstances.add(instance);</span>
+<span class="nc" id="L599">        ssmCommandInvocationInstances = ssmCommandInvocationInstances.stream().distinct().collect(Collectors.toList());</span>
+
+<span class="nc" id="L601">    }</span>
+
+    /**
+     * Gets command id.
+     *
+     * @return the command id
+     */
+    public String getCommandId() {
+<span class="nc" id="L609">        return commandId;</span>
+    }
+
+    /**
+     * Sets command id.
+     *
+     * @param commandId the command id
+     */
+    public void setCommandId(String commandId) {
+<span class="nc" id="L618">        this.commandId = commandId;</span>
+<span class="nc" id="L619">    }</span>
+
+    /**
+     * Is block port boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isBlockPort() {
+<span class="nc" id="L627">        return blockPort;</span>
+    }
+
+    /**
+     * Sets block port.
+     *
+     * @param blockPort the block port
+     */
+    public void setBlockPort(boolean blockPort) {
+<span class="nc" id="L636">        this.blockPort = blockPort;</span>
+<span class="nc" id="L637">    }</span>
+
+    /**
+     * Gets port nums.
+     *
+     * @return the port nums
+     */
+    public List&lt;Integer&gt; getPortNums() {
+<span class="nc" id="L645">        return portNums;</span>
+    }
+
+    /**
+     * Add port num.
+     *
+     * @param portNum the port num
+     */
+    public void addPortNum(int portNum) {
+<span class="nc" id="L654">        portNums.add(portNum);</span>
+<span class="nc" id="L655">        portNums = portNums.stream().distinct().collect(Collectors.toList());</span>
+<span class="nc" id="L656">    }</span>
+
+    /**
+     * Clear port nums.
+     */
+    public void clearPortNums() {
+<span class="nc" id="L662">        portNums.clear();</span>
+<span class="nc" id="L663">    }</span>
+
+    /**
+     * Is ram disk full boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isRamDiskFull() {
+<span class="nc" id="L671">        return ramDiskFull;</span>
+    }
+
+    /**
+     * Sets ram disk full.
+     *
+     * @param ramDiskFull the ram disk full
+     */
+    public void setRamDiskFull(boolean ramDiskFull) {
+<span class="nc" id="L680">        this.ramDiskFull = ramDiskFull;</span>
+<span class="nc" id="L681">    }</span>
+
+    /**
+     * Gets last jenkins perf build number.
+     *
+     * @return the last jenkins perf build number
+     */
+    public int getLastJenkinsPerfBuildNumber() {
+<span class="nc" id="L689">        return lastJenkinsPerfBuildNumber;</span>
+    }
+
+    /**
+     * Sets last jenkins perf build number.
+     *
+     * @param lastJenkinsPerfBuildNumber the last jenkins perf build number
+     */
+    public void setLastJenkinsPerfBuildNumber(int lastJenkinsPerfBuildNumber) {
+<span class="nc" id="L698">        this.lastJenkinsPerfBuildNumber = lastJenkinsPerfBuildNumber;</span>
+<span class="nc" id="L699">    }</span>
+
+    /**
+     * Gets healthy host count.
+     *
+     * @return the healthy host count
+     */
+    public int getHealthyHostCount() {
+<span class="nc" id="L707">        return healthyHostCount;</span>
+    }
+
+
+    /**
+     * Is block dynamo db boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isBlockDynamoDB() {
+<span class="nc" id="L717">        return blockDynamoDB;</span>
+    }
+
+    /**
+     * Sets block dynamo db.
+     *
+     * @param blockDynamoDB the block dynamo db
+     */
+    public void setBlockDynamoDB(boolean blockDynamoDB) {
+<span class="nc" id="L726">        this.blockDynamoDB = blockDynamoDB;</span>
+<span class="nc" id="L727">    }</span>
+
+    /**
+     * Is block s 3 boolean.
+     *
+     * @return the boolean
+     */
+    public boolean isBlockS3() {
+<span class="nc" id="L735">        return blockS3;</span>
+    }
+
+    /**
+     * Sets block s 3.
+     *
+     * @param blockS3 the block s 3
+     */
+    public void setBlockS3(boolean blockS3) {
+<span class="nc" id="L744">        this.blockS3 = blockS3;</span>
+<span class="nc" id="L745">    }</span>
+
+
+    /**
+     * Gets dynamo db table.
+     *
+     * @return the dynamo db table
+     */
+    public String getDynamoDBTable() {
+<span class="nc" id="L754">        return dynamoDBTable;</span>
+    }
+
+    /**
+     * Sets dynamo db table.
+     *
+     * @param dynamoDBTable the dynamo db table
+     */
+    public void setDynamoDBTable(String dynamoDBTable) {
+<span class="nc" id="L763">        this.dynamoDBTable = dynamoDBTable;</span>
+<span class="nc" id="L764">    }</span>
+
+
+    /**
+     * Gets dynamo read capacity.
+     *
+     * @return the dynamo read capacity
+     */
+    public long getDynamoReadCapacity() {
+<span class="nc" id="L773">        return dynamoReadCapacity;</span>
+    }
+
+    /**
+     * Sets dynamo read capacity.
+     *
+     * @param dynamoReadCapacity the dynamo read capacity
+     */
+    public void setDynamoReadCapacity(long dynamoReadCapacity) {
+<span class="nc" id="L782">        this.dynamoReadCapacity = dynamoReadCapacity;</span>
+<span class="nc" id="L783">    }</span>
+
+    /**
+     * Gets dynamo write capacity.
+     *
+     * @return the dynamo write capacity
+     */
+    public long getDynamoWriteCapacity() {
+<span class="nc" id="L791">        return dynamoWriteCapacity;</span>
+    }
+
+    /**
+     * Sets dynamo write capacity.
+     *
+     * @param dynamoWriteCapacity the dynamo write capacity
+     */
+    public void setDynamoWriteCapacity(long dynamoWriteCapacity) {
+<span class="nc" id="L800">        this.dynamoWriteCapacity = dynamoWriteCapacity;</span>
+<span class="nc" id="L801">    }</span>
+
+
+    /**
+     * Sets healthy host count.
+     *
+     * @param healthyHostCount the healthy host count
+     */
+    public void setHealthyHostCount(int healthyHostCount) {
+<span class="nc" id="L810">        this.healthyHostCount = healthyHostCount;</span>
+<span class="nc" id="L811">    }</span>
+
+    /**
+     * Gets compulsory tags.
+     *
+     * @return the compulsory tags
+     */
+    public List&lt;Tag&gt; getCompulsoryTags() {
+<span class="nc" id="L819">        return compulsoryTags;</span>
+    }
+
+    /**
+     * Sets compulsory tags.
+     *
+     * @param compulsoryTags the compulsory tags
+     */
+    public void setCompulsoryTags(List&lt;Tag&gt; compulsoryTags) {
+<span class="nc" id="L828">        this.compulsoryTags = compulsoryTags;</span>
+<span class="nc" id="L829">    }</span>
+
+    /**
+     * Gets ignore tags.
+     *
+     * @return the ignore tags
+     */
+    public List&lt;Tag&gt; getIgnoreTags() {
+<span class="nc" id="L837">        return ignoreTags;</span>
+    }
+
+    /**
+     * Sets ignore tags.
+     *
+     * @param ignoreTags the ignore tags
+     */
+    public void setIgnoreTags(List&lt;Tag&gt; ignoreTags) {
+<span class="nc" id="L846">        this.ignoreTags = ignoreTags;</span>
+<span class="nc" id="L847">    }</span>
+
+    /**
+     * Get availaibilityzones string [ ].
+     *
+     * @return the string [ ]
+     */
+    public String[] getAvailaibilityzones() {
+<span class="nc" id="L855">        return availaibilityzones;</span>
+    }
+
+    /**
+     * Sets availaibilityzones.
+     *
+     * @param availaibilityzones the availaibilityzones
+     */
+    public void setAvailaibilityzones(String[] availaibilityzones) {
+<span class="nc" id="L864">        this.availaibilityzones = availaibilityzones;</span>
+<span class="nc" id="L865">    }</span>
+
+
+    @Override
+    public String toString() {
+<span class="nc" id="L870">        return &quot;ExecutionStateCache{&quot; +</span>
+                &quot;instances=&quot; + instances +
+                &quot;, unhealthyInstances=&quot; + unhealthyInstances +
+                &quot;, stoppedInstances=&quot; + stoppedInstances +
+                &quot;, ssmCommandInvocationInstances=&quot; + ssmCommandInvocationInstances +
+                &quot;, deregisteredInstances=&quot; + deregisteredInstances +
+                &quot;, blockedDomains=&quot; + blockedDomains +
+                &quot;, detachedSubnets=&quot; + detachedSubnets +
+                &quot;, detachedSecurityGroups=&quot; + detachedSecurityGroups +
+                &quot;, ec2Tag='&quot; + ec2Tag + '\'' +
+                &quot;, loadBalancerName='&quot; + loadBalancerName + '\'' +
+                &quot;, processNames=&quot; + processNames +
+                &quot;, healProcess=&quot; + healProcess +
+                &quot;, healNetwork=&quot; + healNetwork +
+                &quot;, cpuSpiked=&quot; + cpuSpiked +
+                &quot;, lastJenkinsPerfBuildNumber=&quot; + lastJenkinsPerfBuildNumber +
+                &quot;, healthyHostCount=&quot; + healthyHostCount +
+                &quot;, ramDiskFull=&quot; + ramDiskFull +
+                &quot;, blockPort=&quot; + blockPort +
+                &quot;, portNums=&quot; + portNums +
+                &quot;, blockDynamoDB=&quot; + blockDynamoDB +
+                &quot;, blockS3=&quot; + blockS3 +
+                &quot;, portNum=&quot; + portNum +
+                &quot;, dbName='&quot; + dbName + '\'' +
+                &quot;, commandId='&quot; + commandId + '\'' +
+                &quot;, elastiCacheClusterName='&quot; + elastiCacheClusterName + '\'' +
+                &quot;, dbInstances=&quot; + dbInstances +
+                &quot;, cacheNodes=&quot; + cacheNodes +
+                &quot;, dynamoDBTable='&quot; + dynamoDBTable + '\'' +
+                &quot;, dynamoReadCapacity=&quot; + dynamoReadCapacity +
+                &quot;, dynamoWriteCapacity=&quot; + dynamoWriteCapacity +
+                &quot;, compulsoryTags=&quot; + compulsoryTags +
+                &quot;, ignoreTags=&quot; + ignoreTags +
+<span class="nc" id="L903">                &quot;, availaibilityzones=&quot; + Arrays.toString(availaibilityzones) +</span>
+                '}';
+    }
+
+
+    /**
+     * Clear.
+     */
+    public void clear() {
+
+<span class="nc" id="L913">        instances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L914">        unhealthyInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L915">        detachedSubnets = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L916">        blockedDomains = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L917">        dbInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L918">        cacheNodes = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L919">        detachedSecurityGroups = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L920">        ssmCommandInvocationInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L921">        deregisteredInstances = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L922">        processNames = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L923">        ignoreTags = new CopyOnWriteArrayList&lt;&gt;();</span>
+<span class="nc" id="L924">        availaibilityzones = null;</span>
+
+<span class="nc" id="L926">        compulsoryTags = null;</span>
+<span class="nc" id="L927">        ec2Tag = null;</span>
+<span class="nc" id="L928">        loadBalancerName = null;</span>
+<span class="nc" id="L929">        dbName = null;</span>
+<span class="nc" id="L930">        commandId = null;</span>
+<span class="nc" id="L931">        elastiCacheClusterName = null;</span>
+<span class="nc" id="L932">        dynamoDBTable = null;</span>
+
+<span class="nc" id="L934">        healProcess = false;</span>
+<span class="nc" id="L935">        healNetwork = false;</span>
+<span class="nc" id="L936">        cpuSpiked = false;</span>
+<span class="nc" id="L937">        ramDiskFull = false;</span>
+<span class="nc" id="L938">        blockPort = false;</span>
+<span class="nc" id="L939">        blockDynamoDB = false;</span>
+<span class="nc" id="L940">        blockS3 = false;</span>
+
+<span class="nc" id="L942">        portNum = 0;</span>
+<span class="nc" id="L943">        dynamoReadCapacity = 0l;</span>
+<span class="nc" id="L944">        dynamoWriteCapacity = 0l;</span>
+<span class="nc" id="L945">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

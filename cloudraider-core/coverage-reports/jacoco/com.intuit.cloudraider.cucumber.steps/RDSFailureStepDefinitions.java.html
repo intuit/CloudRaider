@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RDSFailureStepDefinitions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.cucumber.steps</a> &gt; <span class="el_source">RDSFailureStepDefinitions.java</span></div><h1>RDSFailureStepDefinitions.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.cucumber.steps;
+
+import com.intuit.cloudraider.core.interfaces.RDSRaider;
+import com.intuit.cloudraider.cucumber.model.ExecutionStateCache;
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import java.util.List;
+import java.util.stream.IntStream;
+
+/**
+ * Cucumber Step Definitions for AWS Relational Database Service functionality.
+ */
+public class RDSFailureStepDefinitions {
+
+
+    @Autowired
+    @Qualifier(&quot;rdsRaiderBean&quot;)
+    private RDSRaider rdsRaider;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L53">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private ExecutionStateCache executionStateCache;
+
+    public ExecutionStateCache getExecutionStateCache() {
+<span class="nc" id="L59">        return executionStateCache;</span>
+    }
+
+    public void setExecutionStateCache(ExecutionStateCache executionStateCache) {
+<span class="nc" id="L63">        this.executionStateCache = executionStateCache;</span>
+<span class="nc" id="L64">    }</span>
+
+<span class="nc" id="L66">    public RDSFailureStepDefinitions() {</span>
+<span class="nc" id="L67">    }</span>
+
+    /**
+     * Sets the name of the database.
+     *
+     * @param dbName database name
+     */
+    @Given(&quot;^dBInstance \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions givenRDSInstances(String dbName) {
+<span class="nc" id="L76">        logger.info(&quot;RDS instances &quot; + rdsRaider.getAllDbInstanceNames());</span>
+<span class="nc" id="L77">        executionStateCache.addDBInstances(rdsRaider.getAllDbInstanceNames());</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (executionStateCache.getDBInstances().contains(dbName)) {</span>
+<span class="nc" id="L79">            executionStateCache.setDbName(dbName);</span>
+        } else {
+<span class="nc" id="L81">            throw new RuntimeException(&quot;Unable to set the db name, no db instances available&quot;);</span>
+        }
+
+<span class="nc" id="L84">        return this;</span>
+    }
+
+    /**
+     * Reboot the given number of instances.
+     *
+     * @param numDbInstances number of instances
+     */
+    @When(&quot;^reboot (\\d+) DbInstance$&quot;)
+    public RDSFailureStepDefinitions rebootInstanceOnNumInstances(int numDbInstances) {
+<span class="nc" id="L94">        List&lt;String&gt; dbInstances = executionStateCache.getDBInstances();</span>
+<span class="nc bnc" id="L95" title="All 4 branches missed.">        if (dbInstances == null || dbInstances.isEmpty()) {</span>
+<span class="nc" id="L96">            throw new RuntimeException(&quot;Unable to reboot db instance, no db instances available&quot;);</span>
+        }
+
+<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (numDbInstances &gt; dbInstances.size()) {</span>
+<span class="nc" id="L100">            numDbInstances = dbInstances.size();</span>
+        }
+
+<span class="nc" id="L103">        IntStream.range(0, numDbInstances)</span>
+<span class="nc" id="L104">                .parallel()</span>
+<span class="nc" id="L105">                .forEach(</span>
+                        i -&gt;
+                        {
+<span class="nc" id="L108">                            rdsRaider.rebootDbInstance(dbInstances.get(i));</span>
+<span class="nc" id="L109">                        });</span>
+
+<span class="nc" id="L111">        return this;</span>
+    }
+
+    /**
+     * Assert that the expected status of the RDS matches the given status.
+     *
+     * @param expectedStatus expected status
+     */
+    @Then(&quot;^assertRDS instance status \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void assertDbInstanceStatus(String expectedStatus) {
+<span class="nc" id="L121">        String dbName = executionStateCache.getDbName();</span>
+<span class="nc bnc" id="L122" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L123">            throw new RuntimeException(&quot;Unable to reboot db instance, no db instance available&quot;);</span>
+        }
+<span class="nc" id="L125">        org.testng.Assert.assertEquals(rdsRaider.getDBInstanceStatus(dbName), expectedStatus);</span>
+<span class="nc" id="L126">    }</span>
+
+    /**
+     * Reboot the current database instance.
+     */
+    @When(&quot;^reboot DbInstance$&quot;)
+    public RDSFailureStepDefinitions rebootDBInstance() {
+<span class="nc" id="L133">        String dbName = executionStateCache.getDbName();</span>
+<span class="nc bnc" id="L134" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L135">            throw new RuntimeException(&quot;Unable to reboot db instance, no db instance available&quot;);</span>
+        }
+
+<span class="nc" id="L138">        rdsRaider.rebootDbInstance(dbName);</span>
+<span class="nc" id="L139">        return this;</span>
+    }
+
+    /**
+     * Detach the security group from the database instance. If the number of security groups currently attached is less than 2 and
+     * the database instance currently does not have the default security group id, add the default.
+     *
+     * @param groupId security group id
+     * @param defaultGroupId default security group id
+     */
+    @When(&quot;^detach DBSecurityGroup \&quot;([^\&quot;]*)\&quot; with \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions detachDBSecurityGroup(String groupId, String defaultGroupId) {
+<span class="nc" id="L151">        String dbName = executionStateCache.getDbName();</span>
+
+<span class="nc bnc" id="L153" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L154">            throw new RuntimeException(&quot;Unable to detach security group on db instance, no db instance available&quot;);</span>
+        }
+<span class="nc bnc" id="L156" title="All 4 branches missed.">        if (groupId == null || groupId.isEmpty()) {</span>
+<span class="nc" id="L157">            throw new RuntimeException(&quot;Unable to detach security group on db instance, no security group available&quot;);</span>
+        }
+<span class="nc bnc" id="L159" title="All 4 branches missed.">        if (rdsRaider.getSecurityGroups(dbName).size() &lt; 2 &amp;&amp; !rdsRaider.getSecurityGroups(dbName).contains(defaultGroupId)) {</span>
+<span class="nc" id="L160">            rdsRaider.attachSecurityGroups(dbName, defaultGroupId);</span>
+        }
+<span class="nc" id="L162">        rdsRaider.detachSecurityGroups(dbName, groupId);</span>
+<span class="nc" id="L163">        return this;</span>
+    }
+
+    /**
+     * Attach the security group from the database instance. If the database instance has the default security group id,
+     * detach the default.
+     *
+     * @param groupId security group id
+     * @param defaultGroupId default security group id
+     */
+    @Then(&quot;^attach DBSecurityGroup \&quot;([^\&quot;]*)\&quot; with \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions attachDBSecurityGroup(String groupId, String defaultGroupId) {
+<span class="nc" id="L175">        String dbName = executionStateCache.getDbName();</span>
+<span class="nc bnc" id="L176" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L177">            throw new RuntimeException(&quot;Unable to detach security group on db instance, no db instance available&quot;);</span>
+        }
+<span class="nc bnc" id="L179" title="All 4 branches missed.">        if (groupId == null || groupId.isEmpty()) {</span>
+<span class="nc" id="L180">            throw new RuntimeException(&quot;Unable to detach security group on db instance, no security group available&quot;);</span>
+        }
+<span class="nc" id="L182">        rdsRaider.attachSecurityGroups(dbName, groupId);</span>
+
+<span class="nc bnc" id="L184" title="All 2 branches missed.">        if (rdsRaider.getSecurityGroups(dbName).contains(defaultGroupId)) {</span>
+<span class="nc" id="L185">            rdsRaider.detachSecurityGroups(dbName, defaultGroupId);</span>
+        }
+<span class="nc" id="L187">        return this;</span>
+    }
+
+    /**
+     * Detach subnet with matching id to the current database instance.
+     *
+     * @param subnetId subnet id
+     */
+    @When(&quot;^detach DB subnet \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions detachDBSubnet(String subnetId) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L198">        String dbName = executionStateCache.getDbName();</span>
+<span class="nc bnc" id="L199" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L200">            throw new RuntimeException(&quot;Unable to detach subnet from db instance, no db instance available&quot;);</span>
+        }
+<span class="nc bnc" id="L202" title="All 4 branches missed.">        if (subnetId == null || subnetId.isEmpty()) {</span>
+<span class="nc" id="L203">            throw new RuntimeException(&quot;Subnet is null or empty&quot;);</span>
+        }
+<span class="nc" id="L205">        rdsRaider.detachSubnet(dbName, subnetId);</span>
+<span class="nc" id="L206">        return this;</span>
+    }
+
+    /**
+     * Attach subnet with matching id to the current database instance.
+     *
+     * @param subnetId subnet id
+     */
+    @Then(&quot;^attach DB subnet \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions attachDBSubnet(String subnetId) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L217">        String dbName = executionStateCache.getDbName();</span>
+<span class="nc bnc" id="L218" title="All 4 branches missed.">        if (dbName == null || dbName.isEmpty()) {</span>
+<span class="nc" id="L219">            throw new RuntimeException(&quot;Unable to attach subnet from db instance, no db instance available&quot;);</span>
+        }
+<span class="nc bnc" id="L221" title="All 4 branches missed.">        if (subnetId == null || subnetId.isEmpty()) {</span>
+<span class="nc" id="L222">            throw new RuntimeException(&quot;Subnet is null or empty&quot;);</span>
+        }
+<span class="nc" id="L224">        rdsRaider.attachSubnet(dbName, subnetId);</span>
+<span class="nc" id="L225">        return this;</span>
+    }
+
+    /**
+     * Create database snapshot with the given name.
+     *
+     * @param snapshotName name of snapshot to be created
+     */
+    @When(&quot;^create DB snapshot with name \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions createDBSnapshot(String snapshotName) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L236">        rdsRaider.generateSnapshot(executionStateCache.getDbName(), snapshotName);</span>
+
+<span class="nc" id="L238">        return this;</span>
+    }
+
+    /**
+     * Restore the database from the snapshot with the given name.
+     *
+     * @param snapshotName String snapshot name
+     */
+    @When(&quot;^restore DB from snapshot with name \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public RDSFailureStepDefinitions restoreDBFromSnapshot(String snapshotName) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L249">        rdsRaider.restoreDBInstanceFromSnapshot(executionStateCache.getDbName(), snapshotName);</span>
+<span class="nc" id="L250">        return this;</span>
+    }
+
+    /**
+     * Change the database storage size to the one provided.
+     *
+     * @param storageSize storage size in GB
+     */
+    @When(&quot;^change DB storage size to (\\d+) GB$&quot;)
+    public RDSFailureStepDefinitions changeDBStorageSize(int storageSize) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L261">        rdsRaider.modifyDbStorageSize(executionStateCache.getDbName(), storageSize);</span>
+<span class="nc" id="L262">        return this;</span>
+    }
+
+    /**
+     * Change the database iops size to the one provided.
+     *
+     * @param iops integer iops size
+     */
+    @When(&quot;^change DB iops size to (\\d+)$&quot;)
+    public void changeDBIops(int iops) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L273">        rdsRaider.modifyDbIops(executionStateCache.getDbName(), iops);</span>
+<span class="nc" id="L274">    }</span>
+
+    /**
+     * Change the database instance class to the one provided.
+     *
+     * @param instanceClass database instance class
+     */
+    @When(&quot;^change DB InstanceClass \&quot;([^\&quot;]*)\&quot;$&quot;)
+    public void changeDBInstanceClass(String instanceClass) throws Throwable {
+        // Write code here that turns the phrase above into concrete actions
+<span class="nc" id="L284">        rdsRaider.modifyDbInstanceClass(executionStateCache.getDbName(), instanceClass);</span>
+<span class="nc" id="L285">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>

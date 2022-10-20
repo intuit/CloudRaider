@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SystemRaiderImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cloudraider-core</a> &gt; <a href="index.source.html" class="el_package">com.intuit.cloudraider.core.impl</a> &gt; <span class="el_source">SystemRaiderImpl.java</span></div><h1>SystemRaiderImpl.java</h1><pre class="source lang-java linenums">/*
+ * Apache 2.0 License
+ *
+ * Copyright (c) 2019 Intuit Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.intuit.cloudraider.core.impl;
+
+import com.google.common.base.Strings;
+import com.google.common.net.InetAddresses;
+import com.intuit.cloudraider.commons.CloudRaiderSSHSessionFactory;
+import com.intuit.cloudraider.commons.SystemDelegator;
+import com.intuit.cloudraider.core.interfaces.SystemRaider;
+import com.intuit.cloudraider.utils.ConfigUtils;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.pastdev.jsch.SessionFactory;
+import com.pastdev.jsch.proxy.SshProxy;
+import com.pastdev.jsch.scp.ScpFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.io.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+/**
+ * Script Execution functionality.
+ * &lt;p&gt;
+  */
+@Component (value=&quot;systemRaiderBean&quot;)
+public class SystemRaiderImpl implements SystemRaider {
+
+    /**
+     * The System delegator.
+     */
+    @Autowired
+    private SystemDelegator systemDelegator;
+
+    /**
+     * The Logger.
+     */
+<span class="nc" id="L67">    Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    /**
+     * Instantiates a new System raider.
+     */
+<span class="nc" id="L72">    public SystemRaiderImpl() {</span>
+<span class="nc" id="L73">           }</span>
+
+
+    /**
+     * Execute the given script on the specified instance with parameters.
+     *
+     * @param ip private ip address of AWS resources
+     * @param path path to script
+     * @param params parameters for commands
+     * @return execution response
+     */
+    @Override
+    public String executeScript(String ip, String path, String... params) {
+        String response;
+        SessionFactory sessionFactory;
+        try {
+<span class="nc" id="L89">            sessionFactory = createSessionFactory(ip);</span>
+<span class="nc" id="L90">            scpScript(sessionFactory, path);</span>
+<span class="nc" id="L91">            response = executer(ip, params);</span>
+
+<span class="nc" id="L93">        } catch (JSchException e) {</span>
+<span class="nc" id="L94">            return &quot;unable to connect to &quot; + ip;</span>
+<span class="nc" id="L95">        } catch (IOException e) {</span>
+<span class="nc" id="L96">            return &quot;unable to copy file to the host, error: &quot; + e;</span>
+<span class="nc" id="L97">        } catch (Exception e) {</span>
+<span class="nc" id="L98">            e.printStackTrace();</span>
+<span class="nc" id="L99">            throw new RuntimeException(e);</span>
+<span class="nc" id="L100">        }</span>
+<span class="nc" id="L101">        return response;</span>
+
+    }
+
+    /**
+     * Execute the given script on the specified instance with parameters.
+     *
+     * @param ip private ip address of AWS resources
+     * @param path path to script
+     * @param params list of command parameters
+     * @return execution response
+     */
+    @Override
+    public String executeScript(String ip, String path, List&lt;String&gt; params) {
+        String response;
+        SessionFactory sessionFactory;
+        try {
+<span class="nc" id="L118">            sessionFactory = createSessionFactory(ip);</span>
+<span class="nc" id="L119">            scpScript(sessionFactory, path);</span>
+<span class="nc" id="L120">            response = executer(ip, params);</span>
+
+<span class="nc" id="L122">        } catch (JSchException e) {</span>
+<span class="nc" id="L123">            return &quot;unable to connect to &quot; + ip;</span>
+<span class="nc" id="L124">        } catch (IOException e) {</span>
+<span class="nc" id="L125">            return &quot;unable to copy file to the host, error: &quot; + e;</span>
+<span class="nc" id="L126">        } catch (Exception e) {</span>
+<span class="nc" id="L127">            throw new RuntimeException(e);</span>
+<span class="nc" id="L128">        }</span>
+<span class="nc" id="L129">        return response;</span>
+
+    }
+
+
+    /**
+     * Generates SSH session with the given ip address.
+     *
+     * @param ip ip address
+     * @return SessionFactory
+     */
+    private SessionFactory createSessionFactory(String ip) throws JSchException, IOException {
+
+<span class="nc" id="L142">    	Properties prop = new Properties();</span>
+        InputStream input;
+
+<span class="nc" id="L145">        String configfile = ConfigUtils.getConfigFilePath();</span>
+<span class="nc" id="L146">        input = ClassLoader.getSystemResourceAsStream(configfile);</span>
+<span class="nc" id="L147">        prop.load(input);</span>
+
+<span class="nc" id="L149">        String skipbastion = prop.getProperty(&quot;skipbastion&quot;);</span>
+
+<span class="nc" id="L151">        InetAddresses.forString(ip);</span>
+<span class="nc" id="L152">        logger.debug(&quot;SSH params = &quot; + systemDelegator.getSshParameters());</span>
+<span class="nc" id="L153">        CloudRaiderSSHSessionFactory sessionFactory = new CloudRaiderSSHSessionFactory(</span>
+<span class="nc" id="L154">                systemDelegator.getSshParameters().getUsername(), ip, SessionFactory.SSH_PORT );</span>
+
+
+<span class="nc" id="L157">        sessionFactory.addIdentityFromPrivateKey(systemDelegator.getSshParameters().getPrivateKeyPath(), systemDelegator.getSshParameters().getPassPhrase());</span>
+
+<span class="nc" id="L159">        sessionFactory.printIdentities();</span>
+<span class="nc" id="L160">        Map&lt;String,String&gt; config = new HashMap&lt;String, String&gt;();</span>
+
+<span class="nc" id="L162">        config.put(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);</span>
+<span class="nc" id="L163">        config.put(&quot;PreferredAuthentications&quot;, &quot;publickey&quot;);</span>
+
+<span class="nc" id="L165">        sessionFactory.setConfig(config);</span>
+
+ //   	logger.debug(skipbastion);
+
+<span class="nc bnc" id="L169" title="All 4 branches missed.">        if(skipbastion!=null &amp;&amp; skipbastion.equalsIgnoreCase(&quot;yes&quot;))</span>
+        {
+<span class="nc" id="L171">        	SessionFactory destinationSessionFactory = sessionFactory</span>
+<span class="nc" id="L172">                    .newSessionFactoryBuilder()</span>
+<span class="nc" id="L173">                    .build();</span>
+
+<span class="nc" id="L175">            logger.debug(&quot;SSH HostName: &quot; + destinationSessionFactory.getHostname());</span>
+<span class="nc" id="L176">            logger.debug(&quot;SSH Port: &quot; +String.valueOf(destinationSessionFactory.getPort()));</span>
+
+<span class="nc" id="L178">            return destinationSessionFactory;</span>
+        }
+        else
+        {
+<span class="nc" id="L182">	        SessionFactory proxySessionFactory = sessionFactory</span>
+<span class="nc" id="L183">	                .newSessionFactoryBuilder()</span>
+<span class="nc" id="L184">	                .setHostname( systemDelegator.getSshParameters().getBastionHost() )</span>
+<span class="nc" id="L185">	                .setPort( SessionFactory.SSH_PORT )</span>
+<span class="nc" id="L186">	                .build();</span>
+
+<span class="nc" id="L188">	        SessionFactory destinationSessionFactory = sessionFactory</span>
+<span class="nc" id="L189">	                .newSessionFactoryBuilder()</span>
+<span class="nc" id="L190">	                .setProxy( new SshProxy( proxySessionFactory ) )</span>
+<span class="nc" id="L191">	                .build();</span>
+
+<span class="nc" id="L193">            logger.debug(&quot;SSH HostName: &quot; + destinationSessionFactory.getHostname());</span>
+<span class="nc" id="L194">            logger.debug(&quot;SSH Port: &quot; +String.valueOf(destinationSessionFactory.getPort()));</span>
+
+
+<span class="nc" id="L197">	        return destinationSessionFactory;</span>
+        }
+    }
+
+    /**
+     * Copy the provided script over to the SSH'd instance using SCP.
+     *
+     * @param sessionFactory SessionFactory
+     * @param scriptPath path to find script
+     * @throws FileNotFoundException
+     */
+    private void scpScript(SessionFactory sessionFactory, String scriptPath) throws FileNotFoundException {
+<span class="nc" id="L209">        FileReader fr = new FileReader(scriptPath);</span>
+<span class="nc" id="L210">        File file = new File(scriptPath);</span>
+
+        try {
+            // ScpFile to = new ScpFile( sessionFactory, &quot;/home/&quot;+systemDelegator.getSshParameters().getUsername()+&quot;/action.sh&quot; );
+<span class="nc" id="L214">            ScpFile to = new ScpFile(sessionFactory, &quot;/&quot;, &quot;home&quot;, &quot;/&quot;, systemDelegator.getSshParameters().getUsername(), &quot;/&quot;, &quot;action.sh&quot;);</span>
+<span class="nc" id="L215">            to.copyFrom(file);</span>
+<span class="nc" id="L216">        } catch (Exception e) {</span>
+<span class="nc" id="L217">            e.printStackTrace();</span>
+<span class="nc" id="L218">            throw new RuntimeException(e);</span>
+<span class="nc" id="L219">        }</span>
+<span class="nc" id="L220">    }</span>
+
+    private String executer(String ip) throws Exception {
+<span class="nc" id="L223">        executer(&quot;sh /home/&quot; + systemDelegator.getSshParameters().getUsername() + &quot;/action.sh&quot;, createSessionFactory(ip).newSession());</span>
+<span class="nc" id="L224">        return &quot;success&quot;;</span>
+    }
+
+    private String executer(String ip, String... params) throws Exception {
+<span class="nc" id="L228">        executer(&quot;sh /home/&quot; + systemDelegator.getSshParameters().getUsername() + &quot;/action.sh&quot;, createSessionFactory(ip).newSession(), params);</span>
+<span class="nc" id="L229">        return &quot;success&quot;;</span>
+    }
+
+    private String executer(String ip, List&lt;String&gt; params) throws Exception {
+<span class="nc" id="L233">        executer(&quot;sh /home/&quot; + systemDelegator.getSshParameters().getUsername() + &quot;/action.sh&quot;, createSessionFactory(ip).newSession(), params);</span>
+<span class="nc" id="L234">        return &quot;success&quot;;</span>
+    }
+
+    /**
+     * Executes the given command and its paramters on the specified session.
+     *
+     * @param command command to run
+     * @param session Session to run command on
+     * @param params command parameters
+     * @return true
+     * @throws Exception if error occurred during execution
+     */
+    private Boolean executer(String command, Session session, String... params) throws Exception {
+        try {
+<span class="nc" id="L248">            session.connect();</span>
+<span class="nc" id="L249">            Channel channel = session.openChannel(&quot;exec&quot;);</span>
+
+<span class="nc" id="L251">            channel.setInputStream(null);</span>
+
+<span class="nc" id="L253">            channel.setOutputStream(System.out);</span>
+
+<span class="nc" id="L255">            String parameters = &quot;&quot;;</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">            for (String p : params) {</span>
+<span class="nc" id="L257">                parameters += &quot; &quot; + p;</span>
+            }
+<span class="nc" id="L259">            ((ChannelExec) channel).setCommand(&quot;sudo &quot; + command + parameters);</span>
+
+<span class="nc" id="L261">            OutputStream out = channel.getOutputStream();</span>
+
+<span class="nc" id="L263">            channel.connect();</span>
+
+<span class="nc" id="L265">            InputStream in = channel.getInputStream();</span>
+<span class="nc" id="L266">            Boolean exit = false;</span>
+<span class="nc" id="L267">            byte[] tmp = new byte[1024];</span>
+
+            while (true) {
+<span class="nc bnc" id="L270" title="All 2 branches missed.">                while (in.available() &gt; 0) {</span>
+<span class="nc" id="L271">                    int i = in.read(tmp, 0, 1024);</span>
+<span class="nc bnc" id="L272" title="All 2 branches missed.">                    if (i &lt; 0) {</span>
+<span class="nc" id="L273">                        exit = true;</span>
+<span class="nc" id="L274">                        break;</span>
+                    }
+<span class="nc" id="L276">                    String output = new String(tmp, 0, i);</span>
+<span class="nc bnc" id="L277" title="All 2 branches missed.">                    if (output.contains(&quot;executing..&quot;)) {</span>
+<span class="nc" id="L278">                        exit = true;</span>
+<span class="nc" id="L279">                        break;</span>
+                    }
+<span class="nc" id="L281">                }</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">                if (channel.isClosed()) {</span>
+<span class="nc" id="L283">                    logger.debug(&quot;SSH exit-status:&quot; + channel.getExitStatus());</span>
+<span class="nc" id="L284">                    break;</span>
+                }
+<span class="nc bnc" id="L286" title="All 2 branches missed.">                if (exit) {</span>
+<span class="nc" id="L287">                    break;</span>
+                }
+                try {
+<span class="nc" id="L290">                    Thread.sleep(200);</span>
+<span class="nc" id="L291">                } catch (Exception ee) {</span>
+<span class="nc" id="L292">                    throw new Exception(ee);</span>
+<span class="nc" id="L293">                }</span>
+            }
+<span class="nc" id="L295">            channel.disconnect();</span>
+<span class="nc" id="L296">            session.disconnect();</span>
+<span class="nc" id="L297">            return true;</span>
+<span class="nc" id="L298">        } catch (Exception e) {</span>
+<span class="nc" id="L299">            throw new RuntimeException(e.getMessage());</span>
+        }
+    }
+
+    /**
+     *
+     * @param command
+     * @param session
+     * @param params
+     * @return
+     * @throws Exception
+     */
+    private Boolean executer(String command, Session session, List&lt;String&gt; params) throws Exception {
+        try {
+<span class="nc" id="L313">            session.connect();</span>
+<span class="nc" id="L314">            Channel channel = session.openChannel(&quot;exec&quot;);</span>
+
+<span class="nc" id="L316">            channel.setInputStream(null);</span>
+
+<span class="nc" id="L318">            channel.setOutputStream(System.out);</span>
+
+<span class="nc" id="L320">            String parameters = &quot;&quot;;</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">            for (String p : params) {</span>
+<span class="nc" id="L322">                parameters += &quot; &quot; + p;</span>
+<span class="nc" id="L323">            }</span>
+<span class="nc" id="L324">            ((ChannelExec) channel).setCommand(&quot;sudo &quot; + command + parameters);</span>
+
+<span class="nc" id="L326">            OutputStream out = channel.getOutputStream();</span>
+
+<span class="nc" id="L328">            channel.connect();</span>
+
+<span class="nc" id="L330">            InputStream in = channel.getInputStream();</span>
+<span class="nc" id="L331">            Boolean exit = false;</span>
+<span class="nc" id="L332">            byte[] tmp = new byte[1024];</span>
+
+            while (true) {
+<span class="nc bnc" id="L335" title="All 2 branches missed.">                while (in.available() &gt; 0) {</span>
+<span class="nc" id="L336">                    int i = in.read(tmp, 0, 1024);</span>
+<span class="nc bnc" id="L337" title="All 2 branches missed.">                    if (i &lt; 0) {</span>
+<span class="nc" id="L338">                        exit = true;</span>
+<span class="nc" id="L339">                        break;</span>
+                    }
+<span class="nc" id="L341">                    String output = new String(tmp, 0, i);</span>
+<span class="nc bnc" id="L342" title="All 2 branches missed.">                    if (output.contains(&quot;executing..&quot;)) {</span>
+<span class="nc" id="L343">                        exit = true;</span>
+<span class="nc" id="L344">                        break;</span>
+                    }
+<span class="nc" id="L346">                }</span>
+<span class="nc bnc" id="L347" title="All 2 branches missed.">                if (channel.isClosed()) {</span>
+<span class="nc" id="L348">                    logger.debug(&quot;SSH exit-status:&quot; + channel.getExitStatus());</span>
+<span class="nc" id="L349">                    break;</span>
+                }
+<span class="nc bnc" id="L351" title="All 2 branches missed.">                if (exit) {</span>
+<span class="nc" id="L352">                    break;</span>
+                }
+                try {
+<span class="nc" id="L355">                    Thread.sleep(200);</span>
+<span class="nc" id="L356">                } catch (Exception ee) {</span>
+<span class="nc" id="L357">                    throw new Exception(ee);</span>
+<span class="nc" id="L358">                }</span>
+            }
+<span class="nc" id="L360">            channel.disconnect();</span>
+<span class="nc" id="L361">            session.disconnect();</span>
+<span class="nc" id="L362">            return true;</span>
+<span class="nc" id="L363">        } catch (Exception e) {</span>
+<span class="nc" id="L364">            throw new RuntimeException(e.getMessage());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.3.201901230119</span></div></body></html>
