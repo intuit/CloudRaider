@@ -54,6 +54,7 @@
         <jacoco.skip.instrument>false</jacoco.skip.instrument>
         <spring.version>4.3.22.RELEASE</spring.version>
         <suite>fmea-tests-all.xml</suite>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
 
