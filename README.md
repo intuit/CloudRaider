@@ -69,6 +69,3 @@ Please review [here](java-example/README.md)
 ##### AWS Simple System Manager
 CloudRaider supports execution of commands on EC2 hosts via AWS Simple System Manager (SSM)
 You can find more information about SSM [here](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html)
-
-### Test Coverage Report ###
-Jacoco is used for test coverage. The report for cloudraider-core can be found [here](cloudraider-core/coverage-reports/jacoco/index.html)
